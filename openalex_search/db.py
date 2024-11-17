@@ -3,10 +3,7 @@ from typing import Any, TypeVar
 
 import requests
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, Index
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import text
-from sqlmodel import Field, SQLModel, create_engine
+from sqlmodel import Column, Field, Index, Session, SQLModel, create_engine, text
 
 from openalex_search.common import CONFIG
 
@@ -113,12 +110,12 @@ def init(wipe: bool = False) -> None:
 
     with Session(ENGINE) as session:
         # create the PG vector extension
-        session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        session.connection().execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         session.commit()
 
         # create the table
         if wipe:
-            session.execute(text("DROP TABLE IF EXISTS work"))
+            session.connection().execute(text("DROP TABLE IF EXISTS work"))
             session.commit()
         SQLModel.metadata.create_all(ENGINE)
 
