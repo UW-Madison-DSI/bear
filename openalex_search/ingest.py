@@ -50,8 +50,6 @@ def ingest(path: Path) -> None:
     LOGGER.info(f"Embedding {len(works)} works...")
 
     works = embed_works(works)  # TODO: Deduplicate, this is an expansive operation
-    # Ignore works without a title or DOI for now
-    works = [work for work in works if work.title is not None and work.doi is not None]
     push(works)
 
     # Insert WorkAuthorships and Authors
@@ -65,8 +63,8 @@ def ingest(path: Path) -> None:
         authors.extend(a)
 
     # Push to the DB
+    push(authors)  # This must be done first to avoid foreign key constraint violations
     push(work_authorships)
-    push(authors)
     LOGGER.info(
         f"Data ingested into DB: {len(works)} works, {len(authors)} authors, {len(work_authorships)} authorships"
     )

@@ -87,9 +87,9 @@ class Work(SQLModel, table=True):
 
 class WorkAuthorship(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    work_id: str | None = None
+    work_id: str | None = Field(default=None, foreign_key="work.id")
     author_position: str
-    author_id: str | None = None
+    author_id: str | None = Field(default=None, foreign_key="author.id")
     institution_id: str
 
 
