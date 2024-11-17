@@ -1,0 +1,2 @@
+EMBEDDING_MODEL = "text-embedding-ada-002"
+EMBEDDING_DIMS = 1536
