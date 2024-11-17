@@ -61,9 +61,7 @@ set -e
 config_git
 maybe_init_git
 maybe_init_uv
-
-# Install Ansible
-
+install_ansible
 
 
 uv add streamlit
