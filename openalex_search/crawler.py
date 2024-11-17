@@ -7,7 +7,8 @@ from openalex_search.staging import LocalDumper
 def get_page_results(cursor: str) -> tuple[str, list[dict]]:
     """Get a page of results from the OpenAlex API."""
 
-    query = "authorships.institutions.lineage:i135310074,type:types/article,primary_topic.id:t10427"  # A small set of UW-Madison articles ~= 300
+    # query = "authorships.institutions.lineage:i135310074,type:types/article,primary_topic.id:t10427"  # A small set of UW-Madison articles ~= 300
+    query = "authorships.author.id:a5088665432|a5029145058|a5108167175,type:types/article"  # Add 300 articles from 3 authors
     url = f"https://api.openalex.org/works?filter={query}&per-page=100&cursor={cursor}&mailto={CONFIG.CONTACT_EMAIL}"
 
     response = requests.get(url)
@@ -32,7 +33,7 @@ def crawl() -> None:
     LOGGER.info(f"Found {len(all_results)} results")
     # Dump to local storage
     dumper = LocalDumper()
-    dumper.dump(all_results, "test_articles.parquet")
+    dumper.dump(all_results, "test_authors.parquet")
     LOGGER.info("Data dumped to local storage")
 
 
