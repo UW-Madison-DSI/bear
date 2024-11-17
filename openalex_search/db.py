@@ -3,7 +3,16 @@ from typing import Any, TypeVar
 
 import requests
 from pgvector.sqlalchemy import Vector
-from sqlmodel import Column, Field, Index, Session, SQLModel, create_engine, text
+from sqlmodel import (
+    Column,
+    Field,
+    Index,
+    Session,
+    SQLModel,
+    create_engine,
+    select,
+    text,
+)
 
 from openalex_search.common import CONFIG
 
@@ -142,3 +151,12 @@ def push(records: list[Record]) -> None:
         for record in records:
             session.merge(record)
         session.commit()
+
+
+def get_author(id: int) -> Author:
+    """Get an author by id."""
+
+    with Session(ENGINE) as session:
+        if author := session.exec(select(Author).where(Author.id == id)).first():
+            return author
+        raise ValueError(f"Author with id {id} not found")
