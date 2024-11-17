@@ -1,4 +1,5 @@
-from typing import Any
+from datetime import datetime
+from typing import Any, TypeVar
 
 import requests
 from pgvector.sqlalchemy import Vector
@@ -9,13 +10,15 @@ from sqlmodel import Field, SQLModel, create_engine
 
 from openalex_search.common import CONFIG
 
+ENGINE = create_engine("postgresql://postgres:postgres@localhost/dev")
+
 
 class Work(SQLModel, table=True):
     id: str = Field(primary_key=True)
-    doi: str
-    title: str
-    display_name: str
-    journal: str | None  # TODO: Check if all articles has journal.
+    doi: str | None = None
+    title: str | None = None
+    display_name: str | None = None
+    journal: str | None = None
     publication_year: int
     publication_date: str
     type: str
@@ -85,14 +88,30 @@ class Work(SQLModel, table=True):
             return f"title: {self.title} \njournal:{self.journal}"
 
 
-# create a session
-engine = create_engine("postgresql://postgres:postgres@localhost/dev")
+class WorkAuthorship(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    work_id: str | None = None
+    author_position: str
+    author_id: str | None = None
+    institution_id: str
+
+
+class Author(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    orcid: str | None = None
+    display_name: str | None = None
+    display_name_alternatives: str | None = None
+    works_count: int = Field(default=0)
+    cited_by_count: int = Field(default=0)
+    last_known_institution: str | None = None
+    works_api_url: str | None = None
+    updated_date: datetime = Field(default_factory=datetime.now)
 
 
 def init(wipe: bool = False) -> None:
     """Initialize the database."""
 
-    with Session(engine) as session:
+    with Session(ENGINE) as session:
         # create the PG vector extension
         session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         session.commit()
@@ -101,7 +120,7 @@ def init(wipe: bool = False) -> None:
         if wipe:
             session.execute(text("DROP TABLE IF EXISTS work"))
             session.commit()
-        SQLModel.metadata.create_all(engine)
+        SQLModel.metadata.create_all(ENGINE)
 
         # create the index
         index = Index(
@@ -114,12 +133,15 @@ def init(wipe: bool = False) -> None:
             },
             postgresql_ops={"embedding": "vector_l2_ops"},
         )
-        index.create(bind=engine)
+        index.create(bind=ENGINE, checkfirst=True)
 
 
-def push_works(works: list[Work]) -> None:
+Record = TypeVar("Record", Work, WorkAuthorship, Author)
+
+
+def push(records: list[Record]) -> None:
     """Push works to the database."""
-    with Session(engine) as session:
-        for work in works:
-            session.add(work)
+    with Session(ENGINE) as session:
+        for record in records:
+            session.merge(record)
         session.commit()

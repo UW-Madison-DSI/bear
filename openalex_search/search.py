@@ -1,11 +1,11 @@
 from sqlmodel import Session, select
 
-from openalex_search.db import Work, engine
+from openalex_search.db import ENGINE, Work
 from openalex_search.embedding import embed
 
 
 def search(query: str, top_k: int = 10) -> list[Work]:
-    with Session(engine) as session:
+    with Session(ENGINE) as session:
         query_embeddings = embed(query)[0]
         y = session.exec(
             select(Work)
