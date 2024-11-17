@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 from sqlmodel import Field, SQLModel, create_engine
 
-from openalex_search.config import EMBEDDING_DIMS, HNSW_EF_CONSTRUCTION, HNSW_M
+from openalex_search.common import CONFIG
 
 
 class Work(SQLModel, table=True):
@@ -26,7 +26,9 @@ class Work(SQLModel, table=True):
     landing_page_url: str | None
     journal: str
     abstract: str | None = Field(default=None)
-    embedding: Any = Field(default=None, sa_column=Column(Vector(EMBEDDING_DIMS)))
+    embedding: Any = Field(
+        default=None, sa_column=Column(Vector(CONFIG.EMBEDDING_DIMS))
+    )
 
     @classmethod
     def pull(cls, doi: str):
@@ -76,7 +78,10 @@ def init(wipe: bool = False) -> None:
             "work_index",
             Work.embedding,
             postgresql_using="hnsw",
-            postgresql_with={"m": HNSW_M, "ef_construction": HNSW_EF_CONSTRUCTION},
+            postgresql_with={
+                "m": CONFIG.HNSW_M,
+                "ef_construction": CONFIG.HNSW_EF_CONSTRUCTION,
+            },
             postgresql_ops={"embedding": "vector_l2_ops"},
         )
         index.create(bind=engine)

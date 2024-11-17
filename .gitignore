@@ -1,3 +1,4 @@
+local_data/
 __pycache__/
 .hypothesis/
 .pytest_cache/

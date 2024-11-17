@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-from openalex_search.config import EMBEDDING_MODEL
+from openalex_search.common import CONFIG
 from openalex_search.db import Work
 
 client = OpenAI()
@@ -8,7 +8,7 @@ client = OpenAI()
 
 def embed(text: str | list[str]) -> list[list[float]]:
     """Use OpenAI to embed text into a vector representation."""
-    response = client.embeddings.create(model=EMBEDDING_MODEL, input=text)
+    response = client.embeddings.create(model=CONFIG.EMBEDDING_MODEL, input=text)
     return [v.embedding for v in response.data]
 
 
