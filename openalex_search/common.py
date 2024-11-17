@@ -10,6 +10,7 @@ class Config:
     EMBEDDING_DIMS: int = 1536
     HNSW_M: int = 32
     HNSW_EF_CONSTRUCTION: int = 512
+    CONTACT_EMAIL: str = "jason.lo@wisc.edu"
 
 
 def make_logger() -> logging.Logger:
