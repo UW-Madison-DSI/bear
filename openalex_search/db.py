@@ -2,12 +2,12 @@ from typing import Any
 
 import requests
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column
+from sqlalchemy import Column, Index
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
 from sqlmodel import Field, SQLModel, create_engine
 
-from openalex_search.config import EMBEDDING_DIMS
+from openalex_search.config import EMBEDDING_DIMS, HNSW_EF_CONSTRUCTION, HNSW_M
 
 
 class Work(SQLModel, table=True):
@@ -61,10 +61,22 @@ def init(wipe: bool = False) -> None:
     """Initialize the database."""
 
     with Session(engine) as session:
+        # create the PG vector extension
         session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         session.commit()
 
+        # create the table
         if wipe:
             session.execute(text("DROP TABLE IF EXISTS work"))
             session.commit()
         SQLModel.metadata.create_all(engine)
+
+        # create the index
+        index = Index(
+            "work_index",
+            Work.embedding,
+            postgresql_using="hnsw",
+            postgresql_with={"m": HNSW_M, "ef_construction": HNSW_EF_CONSTRUCTION},
+            postgresql_ops={"embedding": "vector_l2_ops"},
+        )
+        index.create(bind=engine)
