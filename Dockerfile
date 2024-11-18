@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 WORKDIR /app
-EXPOSE 8080
+EXPOSE 8000
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
@@ -10,19 +10,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 # Install uv
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Install dependencies first to cache them
 COPY pyproject.toml .
+COPY README.md .
 COPY uv.lock .
 RUN uv sync --frozen
-ENV PATH="/root/.local/bin:${PATH}"
 
 # Copy the application
-COPY . .
+COPY openalex_search ./openalex_search
 
 # Inject app_type specific commands
-
-RUN uv tool install streamlit
-CMD ["streamlit", "run", "openalex_search/main.py", "--server.port", "8080"]
+CMD ["uv", "run", "fastapi", "run", "openalex_search/api.py", "--port", "8000"]
 
