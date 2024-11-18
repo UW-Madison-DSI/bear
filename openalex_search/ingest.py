@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from openalex_search.common import LOGGER
-from openalex_search.db import Author, Work, WorkAuthorship, push
+from openalex_search.db import Author, Work, WorkAuthorship, push, init
 from openalex_search.embedding import embed_works
 
 
@@ -71,4 +71,6 @@ def ingest(path: Path) -> None:
 
 
 if __name__ == "__main__":
-    ingest(Path("local_data/test_articles.parquet"))
+    init()
+
+    ingest(Path("local_data/uw-works-1-Ils5OS4wLCAyMjYsICdodHRwczovL29wZW5hbGV4Lm9yZy9XMjA5NzkwNjk2MSddIg==.parquet"))

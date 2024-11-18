@@ -9,22 +9,43 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
   adminer:
     image: adminer:latest
     ports:
-      - "8080:8080"
+      - "18080:8080"
     depends_on:
       - postgres
+    networks:
+      - backend
 
-  fastapi:
+  openalex-search-api:
     build: .
-    ports:
-      - "8000:8000"
     depends_on:
       - postgres
     env_file:
       - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openalex-search-api.rule=Host(`oa-api.services.dsi.wisc.edu`)"
+      - "traefik.http.routers.openalex-search-api.entrypoints=websecure"
+      - "traefik.http.routers.openalex-search-api.tls=true"
+      - "traefik.http.routers.openalex-search-api.tls.certresolver=myresolver"
+    networks:
+      traefik_network:
+        aliases:
+          - openalex-search-api
+      backend: null
+
+networks:
+  traefik_network:
+    external: true
+  backend:
+    driver: bridge
+    
+
 
 volumes:
   pg_data:

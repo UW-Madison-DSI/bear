@@ -1,5 +1,5 @@
 from openai import OpenAI
-
+import tiktoken
 from openalex_search.common import CONFIG
 from openalex_search.db import Work
 
@@ -16,6 +16,11 @@ def embed_work(work: Work) -> Work:
     """Embed a work's title and journal into a vector."""
     work.embedding = embed(str(work))[0]
     return work
+
+def trim_text(text: str, model:str = CONFIG.EMBEDDING_MODEL, tokens: int = 1024) -> str:
+    """Trim text to a maximum number of tokens."""
+    encoding = tiktoken.encoding_for_model(model)
+    return text[:tokens]
 
 
 def embed_works(works: list[Work], batch_size: int = 1024) -> list[Work]:

@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "requests>=2.32.3",
     "sqlmodel>=0.0.22",
+    "tiktoken>=0.8.0",
 ]
 
 [build-system]
