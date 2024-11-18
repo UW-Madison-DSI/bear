@@ -4,11 +4,9 @@ from openalex_search.common import CONFIG, LOGGER
 from openalex_search.staging import LocalDumper
 
 
-def get_page_results(cursor: str) -> tuple[str, list[dict]]:
+def get_page_results(cursor: str, query: str) -> tuple[str, list[dict]]:
     """Get a page of results from the OpenAlex API."""
 
-    # query = "authorships.institutions.lineage:i135310074,type:types/article,primary_topic.id:t10427"  # A small set of UW-Madison articles ~= 300
-    query = "authorships.author.id:a5088665432|a5029145058|a5108167175,type:types/article"  # Add 300 articles from 3 authors
     url = f"https://api.openalex.org/works?filter={query}&per-page=100&cursor={cursor}&mailto={CONFIG.CONTACT_EMAIL}"
 
     response = requests.get(url)
@@ -19,23 +17,35 @@ def get_page_results(cursor: str) -> tuple[str, list[dict]]:
     return cursor, results
 
 
-def crawl() -> None:
-    cursor = "*"
-    all_results = []
+def crawl(query: str, cursor: str = "*", output_prefix: str = "uw-works") -> None:
+    """Crawl the OpenAlex API and dump the results to local storage."""
 
+    dumper = LocalDumper()
+    all_results = []
+    part = 0
     LOGGER.info("Crawling OpenAlex API...")
     while True:
-        cursor, results = get_page_results(cursor=cursor)
+        cursor, results = get_page_results(
+            cursor=cursor,
+            query=query,
+        )
         if not results:
             break
         all_results.extend(results)
+        LOGGER.info(f"Retrieved {len(all_results)} results...")
 
-    LOGGER.info(f"Found {len(all_results)} results")
+        # Checkpointing
+        if len(all_results) % 10000 == 0:
+            dumper.dump(all_results, f"{output_prefix}-{part}-{cursor}.parquet")
+            part += 1
+            all_results = []
+
     # Dump to local storage
-    dumper = LocalDumper()
-    dumper.dump(all_results, "test_authors.parquet")
-    LOGGER.info("Data dumped to local storage")
+    dumper.dump(all_results, f"{output_prefix}-{part}-last.parquet")
+    LOGGER.info("Crawling complete.")
 
 
 if __name__ == "__main__":
-    crawl()
+    crawl(
+        query="authorships.institutions.lineage:i135310074,type:types/article",
+    )
