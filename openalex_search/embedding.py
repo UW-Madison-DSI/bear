@@ -18,10 +18,12 @@ def embed_work(work: Work) -> Work:
     return work
 
 
-def embed_works(works: list[Work]) -> list[Work]:
-    """Embed a list of works in a single batch."""
+def embed_works(works: list[Work], batch_size: int = 1024) -> list[Work]:
+    """Embed a list of works in batch."""
 
-    embeddings = embed([str(work) for work in works])
-    for work, embedding in zip(works, embeddings):
-        work.embedding = embedding
+    for i in range(0, len(works), batch_size):
+        batch = works[i : i + batch_size]
+        embeddings = embed([str(work) for work in batch])
+        for work, embedding in zip(batch, embeddings):
+            work.embedding = embedding
     return works
