@@ -19,6 +19,19 @@ from openalex_search.common import CONFIG
 ENGINE = create_engine("postgresql://postgres:postgres@localhost/dev")
 
 
+def recover_abstract(abstract_inverted_index: dict[str, list[int]]) -> str:
+    """Recover the abstract from the inverted index."""
+    word_positions = []
+    for word, positions in abstract_inverted_index.items():
+        for pos in positions:
+            word_positions.append((pos, word))
+
+    # Sort by positions
+    word_positions.sort(key=lambda x: x[0])
+    abstract = " ".join(word for _, word in word_positions)
+    return abstract
+
+
 class Work(SQLModel, table=True):
     id: str = Field(primary_key=True)
     doi: str | None = None
@@ -55,6 +68,12 @@ class Work(SQLModel, table=True):
         except (KeyError, TypeError):
             journal = None
 
+        abstract = (
+            recover_abstract(data["abstract_inverted_index"])
+            if data.get("abstract_inverted_index")
+            else None
+        )
+
         return dict(
             id=data["id"],
             doi=data["doi"],
@@ -70,6 +89,7 @@ class Work(SQLModel, table=True):
             is_oa=data["best_oa_location"]["is_oa"],
             pdf_url=data["best_oa_location"]["pdf_url"],
             landing_page_url=data["best_oa_location"]["landing_page_url"],
+            abstract=abstract,
         )
 
     @classmethod
