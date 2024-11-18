@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 from typing import Any, TypeVar
 
 import requests
+from dotenv import load_dotenv
 from pgvector.sqlalchemy import Vector
 from sqlmodel import (
     Column,
@@ -16,7 +18,11 @@ from sqlmodel import (
 
 from openalex_search.common import CONFIG
 
-ENGINE = create_engine("postgresql://postgres:postgres@localhost/dev")
+load_dotenv()
+
+POSTGRES_URL = os.getenv("POSTGRES_URL")
+assert POSTGRES_URL is not None, "POSTGRES_URL is not set"
+ENGINE = create_engine(POSTGRES_URL)
 
 
 def recover_abstract(abstract_inverted_index: dict[str, list[int]]) -> str:
