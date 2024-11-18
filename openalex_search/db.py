@@ -105,13 +105,16 @@ class Work(SQLModel, table=True):
         """Create a Work from raw data."""
         return cls(**cls.parse(data))
 
-    @property
-    def text(self) -> str:
+    def __str__(self) -> str:
         """Return a string representation of the work."""
-        if not self.journal:
-            return f"title: {self.title}"
-        else:
-            return f"title: {self.title} \njournal:{self.journal}"
+        text = ""
+        if self.title:
+            text += f"title: {self.title}"
+        if self.journal:
+            text += f"\njournal:{self.journal}"
+        if self.abstract:
+            text += f"\nabstract: {self.abstract}"
+        return text
 
 
 class WorkAuthorship(SQLModel, table=True):

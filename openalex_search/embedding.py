@@ -14,14 +14,14 @@ def embed(text: str | list[str]) -> list[list[float]]:
 
 def embed_work(work: Work) -> Work:
     """Embed a work's title and journal into a vector."""
-    work.embedding = embed(work.text)[0]
+    work.embedding = embed(str(work))[0]
     return work
 
 
 def embed_works(works: list[Work]) -> list[Work]:
     """Embed a list of works in a single batch."""
 
-    embeddings = embed([work.text for work in works])
+    embeddings = embed([str(work) for work in works])
     for work, embedding in zip(works, embeddings):
         work.embedding = embedding
     return works
