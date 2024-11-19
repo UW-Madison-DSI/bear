@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: openalex_search
-  IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}/${{ env.IMAGE_NAME }}
+  IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}/openalex_search
 
 jobs:
   build-and-push:
@@ -18,17 +17,13 @@ jobs:
     - name: Log in to GitHub Container Registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-    - name: Generate DATE_TAG
-      id: date
-      run: echo "DATE_TAG=$(date +%s)" >> $GITHUB_ENV
-
     - name: Build and Tag Docker Image
       run: |
         docker build . \
           -t ${{ env.IMAGE_FULL_NAME }}:latest \
-          -t ${{ env.IMAGE_FULL_NAME }}:${{ env.DATE_TAG }}
+          -t ${{ env.IMAGE_FULL_NAME }}:$(date +%s)
 
     - name: Push the Docker Image
       run: |
         docker push ${{ env.IMAGE_FULL_NAME }}:latest
-        docker push ${{ env.IMAGE_FULL_NAME }}:${{ env.DATE_TAG }}
+        docker push ${{ env.IMAGE_FULL_NAME }}:$(date +%s)
