@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
       POSTGRES_DB: $POSTGRES_DB
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:
@@ -27,25 +27,23 @@ services:
       - postgres
     env_file:
       - .env
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL_COMPOSE}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.openalex-search-api.rule=Host(`oa-api.services.dsi.wisc.edu`)"
       - "traefik.http.routers.openalex-search-api.entrypoints=websecure"
       - "traefik.http.routers.openalex-search-api.tls=true"
       - "traefik.http.routers.openalex-search-api.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_network"
     networks:
+      backend:
       traefik_network:
-        aliases:
-          - openalex-search-api
-      backend: null
 
 networks:
   traefik_network:
     external: true
   backend:
-    driver: bridge
-    
-
 
 volumes:
   pg_data:
