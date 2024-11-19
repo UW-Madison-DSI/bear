@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_FULL_NAME: ghcr.io/${{ github.repository }}/openalex_search
+  IMAGE_FULL_NAME: ghcr.io/jasonlo/openalex_search
 
 jobs:
   build-and-push:
