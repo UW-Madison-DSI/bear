@@ -42,14 +42,13 @@ def ingest(path: Path) -> None:
     # Load the data
     LOGGER.info(f"Loading data from {path}")
     df = pd.read_parquet(path)
-
-    # Insert Works
-    LOGGER.info("Inserting works...")
     works = [Work.from_raw(row.to_dict()) for _, row in df.iterrows()]
 
     LOGGER.info(f"Embedding {len(works)} works...")
-
     works = embed_works(works)  # TODO: Deduplicate, this is an expansive operation
+    
+    # Insert Works
+    LOGGER.info("Inserting works...")
     push(works)
 
     # Insert WorkAuthorships and Authors
@@ -72,5 +71,8 @@ def ingest(path: Path) -> None:
 
 if __name__ == "__main__":
     init()
-
-    ingest(Path("local_data/uw-works-1-Ils5OS4wLCAyMjYsICdodHRwczovL29wZW5hbGV4Lm9yZy9XMjA5NzkwNjk2MSddIg==.parquet"))
+    STAGING_DIR = Path("local_data")
+    for file in STAGING_DIR.glob("*.parquet"):
+        ingest(file)
+        file.unlink()
+        LOGGER.info(f"File {file} ingested and removed")

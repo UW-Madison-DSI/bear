@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import Any, TypeVar
-
+from tqdm import tqdm
 import requests
 from dotenv import load_dotenv
 from pgvector.sqlalchemy import Vector
@@ -177,7 +177,7 @@ Record = TypeVar("Record", Work, WorkAuthorship, Author)
 def push(records: list[Record]) -> None:
     """Push works to the database."""
     with Session(ENGINE) as session:
-        for record in records:
+        for record in tqdm(records):
             session.merge(record)
         session.commit()
 
