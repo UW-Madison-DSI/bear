@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import Any, TypeVar
-from tqdm import tqdm
+
 import requests
 from dotenv import load_dotenv
 from pgvector.sqlalchemy import Vector
@@ -15,6 +15,7 @@ from sqlmodel import (
     select,
     text,
 )
+from tqdm import tqdm
 
 from openalex_search.common import CONFIG
 

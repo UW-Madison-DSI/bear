@@ -25,6 +25,7 @@ class SearchResults(BaseModel):
     name: str = Field(validation_alias="display_name")
     open_alex_url: str = Field(validation_alias="id")
     orcid: str | None
+    score: float
 
 
 @app.get("/search", response_model=list[SearchResults])

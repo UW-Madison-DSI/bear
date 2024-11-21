@@ -4,7 +4,7 @@ import pandas as pd
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from openalex_search.db import ENGINE, Author, Work, WorkAuthorship, get_author
+from openalex_search.db import ENGINE, Work, WorkAuthorship, get_author
 from openalex_search.embedding import embed
 
 
@@ -58,7 +58,7 @@ def _search(query: str, top_k: int) -> list[Any]:
         raise ValueError("No results found.")
 
 
-def search(query: str, top_k: int = 3, m: int = 1000) -> list[Author]:
+def search(query: str, top_k: int = 3, m: int = 1000) -> list[dict]:
     """Search for works using a query.
 
     Args:
@@ -67,10 +67,11 @@ def search(query: str, top_k: int = 3, m: int = 1000) -> list[Author]:
         m (int): The number of articles to rank.
     """
 
-    ids = (
-        SearchResults.from_raw(_search(query, top_k=m))
-        .rank()
-        .head(top_k)["author_id"]
-        .tolist()
-    )
-    return [get_author(id) for id in ids]
+    results = SearchResults.from_raw(_search(query, top_k=m)).rank().head(top_k)
+    ids = results.author_id.to_list()
+    scores = results.id.to_list()
+
+    authors = [
+        get_author(id).model_dump() | {"score": score} for id, score in zip(ids, scores)
+    ]
+    return authors
