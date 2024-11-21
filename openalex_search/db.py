@@ -167,7 +167,7 @@ def init(wipe: bool = False) -> None:
                 "m": CONFIG.HNSW_M,
                 "ef_construction": CONFIG.HNSW_EF_CONSTRUCTION,
             },
-            postgresql_ops={"embedding": "vector_l2_ops"},
+            postgresql_ops={"embedding": "vector_ip_ops"},
         )
         index.create(bind=ENGINE, checkfirst=True)
 

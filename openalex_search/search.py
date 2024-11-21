@@ -8,6 +8,20 @@ from openalex_search.db import ENGINE, Work, WorkAuthorship, get_author
 from openalex_search.embedding import embed
 
 
+def _search(query: str, top_k: int) -> list[Any]:
+    """Search for works using a query."""
+    with Session(ENGINE) as session:
+        query_embeddings = embed(query)[0]
+        if results := session.exec(
+            select(Work, WorkAuthorship)
+            .join(WorkAuthorship)
+            .order_by(Work.embedding.max_inner_product(query_embeddings))
+            .limit(top_k)
+        ).all():
+            return list(results)
+        raise ValueError("No results found.")
+
+
 class SearchResults(BaseModel):
     """Temporary class to hold search results."""
 
@@ -42,20 +56,6 @@ class SearchResults(BaseModel):
             .sort_values(sortby, ascending=False)
             .reset_index()
         )
-
-
-def _search(query: str, top_k: int) -> list[Any]:
-    """Search for works using a query."""
-    with Session(ENGINE) as session:
-        query_embeddings = embed(query)[0]
-        if results := session.exec(
-            select(Work, WorkAuthorship)
-            .join(WorkAuthorship)
-            .order_by(Work.embedding.l2_distance(query_embeddings))
-            .limit(top_k)
-        ).all():
-            return list(results)
-        raise ValueError("No results found.")
 
 
 def search(query: str, top_k: int = 3, m: int = 1000) -> list[dict]:
