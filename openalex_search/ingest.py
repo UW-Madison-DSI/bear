@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 from openalex_search.common import LOGGER
-from openalex_search.db import Author, Work, WorkAuthorship, push, init
+from openalex_search.db import Author, Work, WorkAuthorship, init, push
 from openalex_search.embedding import embed_works
 
 
@@ -46,7 +46,7 @@ def ingest(path: Path) -> None:
 
     LOGGER.info(f"Embedding {len(works)} works...")
     works = embed_works(works)  # TODO: Deduplicate, this is an expansive operation
-    
+
     # Insert Works
     LOGGER.info("Inserting works...")
     push(works)
@@ -74,5 +74,4 @@ if __name__ == "__main__":
     STAGING_DIR = Path("local_data")
     for file in STAGING_DIR.glob("*.parquet"):
         ingest(file)
-        file.unlink()
-        LOGGER.info(f"File {file} ingested and removed")
+        LOGGER.info(f"File {file} ingested.")

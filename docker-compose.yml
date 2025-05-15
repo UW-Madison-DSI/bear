@@ -6,45 +6,20 @@ services:
       POSTGRES_PASSWORD: $POSTGRES_PASSWORD
       POSTGRES_DB: $POSTGRES_DB
     ports:
-      - "15432:5432"
+      - 5432:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
-    networks:
-      - backend
 
-  adminer:
-    image: adminer:latest
-    ports:
-      - "18080:8080"
-    depends_on:
-      - postgres
-    networks:
-      - backend
-
-  openalex-search-api:
-    image: ghcr.io/jasonlo/openalex_search:latest
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       - postgres
     env_file:
       - .env
     environment:
       - POSTGRES_URL=${POSTGRES_URL_COMPOSE}
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.openalex-search-api.rule=Host(`oa-api.services.dsi.wisc.edu`)"
-      - "traefik.http.routers.openalex-search-api.entrypoints=websecure"
-      - "traefik.http.routers.openalex-search-api.tls=true"
-      - "traefik.http.routers.openalex-search-api.tls.certresolver=myresolver"
-      - "traefik.docker.network=traefik_network"
-      - "com.centurylinklabs.watchtower.enable=true"
-    networks:
-      backend:
-      traefik_network:
-
-networks:
-  traefik_network:
-    external: true
-  backend:
 
 volumes:
   pg_data:
