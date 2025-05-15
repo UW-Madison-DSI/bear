@@ -13,3 +13,4 @@ nohup.out
 /tmp
 tmp.ipynb
 .DS_Store
+uv.lock
