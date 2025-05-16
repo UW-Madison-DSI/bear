@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 # Based on https://docs.openalex.org/download-all-data/upload-to-your-database/load-to-a-relational-database
 source .env
 
@@ -21,3 +22,4 @@ mc alias set openalex https://s3.amazonaws.com "" ""
 mc mirror --overwrite --remove openalex/openalex openalex-snapshot
 
 # Step 2: Convert the JSON Lines files to CSV
+python $FLATTEN_PY_FILE

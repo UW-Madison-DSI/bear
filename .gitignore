@@ -15,4 +15,5 @@ tmp.ipynb
 .DS_Store
 uv.lock
 .devcontainer/personal.sh
-openalex-snapshot
+openalex-snapshot/
+csv-files/
