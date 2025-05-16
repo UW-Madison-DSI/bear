@@ -13,6 +13,7 @@ class Config(BaseSettings):
     POSTGRES_DB: str
     OPENAI_API_KEY: str
     POSTGRES_URL: str
+    POSTGRES_LOCAL_URL: str
     EMBEDDING_MODEL: str
     EMBEDDING_DIMS: int
     HNSW_M: int

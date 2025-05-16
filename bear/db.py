@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Any, TypeVar
 
@@ -17,13 +16,11 @@ from sqlmodel import (
 )
 from tqdm import tqdm
 
-from openalex_search.settings import CONFIG
+from bear.settings import CONFIG
 
 load_dotenv()
 
-POSTGRES_URL = os.getenv("POSTGRES_URL")
-assert POSTGRES_URL is not None, "POSTGRES_URL is not set"
-ENGINE = create_engine(POSTGRES_URL)
+ENGINE = create_engine(CONFIG.POSTGRES_LOCAL_URL)
 
 
 def recover_abstract(abstract_inverted_index: dict[str, list[int]]) -> str:

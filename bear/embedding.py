@@ -1,8 +1,8 @@
 import tiktoken
 from openai import OpenAI
 
-from openalex_search.settings import CONFIG, LOGGER
-from openalex_search.db import Work
+from bear.settings import CONFIG, LOGGER
+from bear.db import Work
 
 client = OpenAI()
 

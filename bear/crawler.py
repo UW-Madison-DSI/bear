@@ -8,12 +8,12 @@ from tenacity import (
     wait_exponential,
 )
 
-from openalex_search.settings import CONFIG, LOGGER
-from openalex_search.staging import LocalDumper
+from bear.settings import CONFIG, LOGGER
+from bear.staging import LocalDumper
 
 
 def get_openalex_institution_id(name: str) -> str:
-    url = f"https://api.openalex.org/institutions?search={name}"
+    url = f"https://api.openalex.org/institutions?search={name}&mailto={CONFIG.CONTACT_EMAIL}"
     response = httpx.get(url)
     response.raise_for_status()
     results = response.json().get("results")
@@ -27,11 +27,11 @@ def get_openalex_institution_id(name: str) -> str:
 
 @retry(
     stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=1, min=1, max=60),
+    wait=wait_exponential(min=1, max=60),
     retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
     reraise=True,
 )
-def get_page_results(cursor: str, query: str) -> tuple[str, list[dict]]:
+def get_page_results(query: str, cursor: str = "*") -> tuple[str, list[dict]]:
     """Get a page of results from the OpenAlex API with retry logic."""
 
     url = f"https://api.openalex.org/works?filter={query}&per-page=100&cursor={cursor}&mailto={CONFIG.CONTACT_EMAIL}"
@@ -48,7 +48,7 @@ def get_page_results(cursor: str, query: str) -> tuple[str, list[dict]]:
         raise
 
 
-def crawl(query: str, cursor: str = "*", output_prefix: str = "uw-works") -> None:
+def crawl(query: str, cursor: str = "*", output_prefix: str = "works") -> None:
     """Crawl the OpenAlex API and dump the results to local storage."""
 
     dumper = LocalDumper()
@@ -58,8 +58,8 @@ def crawl(query: str, cursor: str = "*", output_prefix: str = "uw-works") -> Non
     LOGGER.info("Crawling OpenAlex API...")
     while True:
         cursor, results = get_page_results(
-            cursor=cursor,
             query=query,
+            cursor=cursor,
         )
         if not results:
             break

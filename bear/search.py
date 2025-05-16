@@ -4,8 +4,8 @@ import pandas as pd
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from openalex_search.db import ENGINE, Work, WorkAuthorship, get_author
-from openalex_search.embedding import embed
+from bear.db import ENGINE, Work, WorkAuthorship, get_author
+from bear.embedding import embed
 
 
 def _search(query: str, top_k: int) -> list[Any]:

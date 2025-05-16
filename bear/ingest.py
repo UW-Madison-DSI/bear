@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from openalex_search.settings import LOGGER
-from openalex_search.db import Author, Work, WorkAuthorship, init, push
-from openalex_search.embedding import embed_works
+from bear.settings import LOGGER
+from bear.db import Author, Work, WorkAuthorship, init, push
+from bear.embedding import embed_works
 
 
 def unroll(row: pd.Series) -> tuple[list[WorkAuthorship], list[Author]]:
