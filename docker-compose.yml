@@ -9,6 +9,8 @@ services:
       - 5432:5432
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks:
+      - bear
 
   api:
     build:
@@ -16,10 +18,14 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - postgres
-    env_file:
-      - .env
     environment:
       - POSTGRES_URL=$POSTGRES_URL
+    networks:
+      - bear
 
 volumes:
   pg_data:
+
+networks:
+  bear:
+    external: true

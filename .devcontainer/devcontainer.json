@@ -1,5 +1,5 @@
 {
-    "name": "openalex-search",
+    "name": "bear",
     "build": {"dockerfile": "Dockerfile", "context": ".."},
     "remoteUser": "root",
     "features": {
@@ -9,16 +9,6 @@
     "mounts": [
         "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
     ],
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "actboy168.tasks",
-                "ms-toolsai.python-ds-extension-pack",
-                "ms-azuretools.vscode-docker",
-                "charliermarsh.ruff"
-            ]
-        }
-    },
-    "runArgs": ["--network=host"],
-    "postCreateCommand": "chmod +x .devcontainer/post_create.sh && .devcontainer/post_create.sh"
+    "initializeCommand": "docker network ls --format '{{.Name}}' | grep -wq bear || docker network create bear",
+    "runArgs": ["--network=bear"]
 }

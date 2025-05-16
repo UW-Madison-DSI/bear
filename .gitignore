@@ -14,3 +14,4 @@ nohup.out
 tmp.ipynb
 .DS_Store
 uv.lock
+.devcontainer/personal.sh
