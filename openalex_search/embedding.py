@@ -1,6 +1,7 @@
-from openai import OpenAI
 import tiktoken
-from openalex_search.common import CONFIG, LOGGER
+from openai import OpenAI
+
+from openalex_search.settings import CONFIG, LOGGER
 from openalex_search.db import Work
 
 client = OpenAI()
@@ -18,7 +19,9 @@ def embed_work(work: Work) -> Work:
     return work
 
 
-def trim_text(text: str, model:str = CONFIG.EMBEDDING_MODEL, max_tokens: int = 1024) -> str:
+def trim_text(
+    text: str, model: str = CONFIG.EMBEDDING_MODEL, max_tokens: int = 1024
+) -> str:
     """Trim text to a maximum number of tokens."""
     encoder = tiktoken.encoding_for_model(model)
     tokens = encoder.encode(text)

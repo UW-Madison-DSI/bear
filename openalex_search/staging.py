@@ -6,7 +6,7 @@ import boto3
 import pandas as pd
 from dotenv import load_dotenv
 
-from openalex_search.common import LOGGER
+from openalex_search.settings import LOGGER
 
 load_dotenv()
 
@@ -23,7 +23,7 @@ class LocalDumper:
     """Data dumper to local storage."""
 
     def __init__(self, path: Path | None = None):
-        self.path = path or Path("local_data")
+        self.path = path or Path("tmp/openalex")
         self.path.mkdir(exist_ok=True, parents=True)
 
     def dump(self, data: list[dict], file_name: str, skip_exists: bool = True) -> None:

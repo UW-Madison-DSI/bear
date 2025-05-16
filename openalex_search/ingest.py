@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from openalex_search.common import LOGGER
+from openalex_search.settings import LOGGER
 from openalex_search.db import Author, Work, WorkAuthorship, init, push
 from openalex_search.embedding import embed_works
 

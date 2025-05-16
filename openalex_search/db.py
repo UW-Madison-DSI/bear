@@ -17,7 +17,7 @@ from sqlmodel import (
 )
 from tqdm import tqdm
 
-from openalex_search.common import CONFIG
+from openalex_search.settings import CONFIG
 
 load_dotenv()
 
