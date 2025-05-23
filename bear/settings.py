@@ -12,12 +12,17 @@ class Config(BaseSettings):
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "bear"
     POSTGRES_URL: str = "postgresql://postgres:postgres@localhost:5432/bear"
-    OPENAI_API_KEY: str = "your-openai-api-key"
-    EMBEDDING_MODEL: str = "text-embedding-ada-002"
-    EMBEDDING_DIMS: int = 1536
-    HNSW_M: int = 32
-    HNSW_EF_CONSTRUCTION: int = 512
-    CONTACT_EMAIL: str | None = None
+    OPENALEX_MAILTO_EMAIL: str | None = None
+
+    # API keys for external services
+    OPENAI_API_KEY: str | None = None
+
+    # This is the default embedding settings for all documents, which can be overridden in the per-document settings.
+    DEFAULT_EMBEDDING_PROVIDER: str = "openai"
+    DEFAULT_EMBEDDING_MODEL: str = "text-embedding-ada-002"
+    DEFAULT_EMBEDDING_DIMS: int = 1536
+    DEFAULT_HNSW_M: int = 32
+    DEFAULT_HNSW_EF_CONSTRUCTION: int = 512
 
 
 def make_logger() -> logging.Logger:

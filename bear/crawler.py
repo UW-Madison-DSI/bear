@@ -15,8 +15,8 @@ from bear.settings import CONFIG, LOGGER
 
 def get_openalex_institution_id(name: str) -> str:
     url = f"https://api.openalex.org/institutions?search={name}"
-    if CONFIG.CONTACT_EMAIL:
-        url += f"&mailto={CONFIG.CONTACT_EMAIL}"
+    if CONFIG.OPENALEX_MAILTO_EMAIL:
+        url += f"&mailto={CONFIG.OPENALEX_MAILTO_EMAIL}"
     response = httpx.get(url)
     response.raise_for_status()
     results = response.json().get("results")
@@ -39,8 +39,8 @@ def get_page_results(query: str, cursor: str = "*") -> tuple[str, list[dict]]:
 
     url = f"https://api.openalex.org/works?filter={query}&per-page=100&cursor={cursor}"
 
-    if CONFIG.CONTACT_EMAIL:
-        url += f"&mailto={CONFIG.CONTACT_EMAIL}"
+    if CONFIG.OPENALEX_MAILTO_EMAIL:
+        url += f"&mailto={CONFIG.OPENALEX_MAILTO_EMAIL}"
 
     try:
         response = httpx.get(url, timeout=30.0)
