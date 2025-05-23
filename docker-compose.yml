@@ -1,17 +1,4 @@
 services:
-  postgres:
-    image: pgvector/pgvector:pg17
-    environment:
-      POSTGRES_USER: $POSTGRES_USER
-      POSTGRES_PASSWORD: $POSTGRES_PASSWORD
-      POSTGRES_DB: $POSTGRES_DB
-    ports:
-      - 5432:5432
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - bear
-
   api:
     build:
       context: .
@@ -22,9 +9,6 @@ services:
       - POSTGRES_URL=$POSTGRES_URL
     networks:
       - bear
-
-volumes:
-  pg_data:
 
 networks:
   bear:
