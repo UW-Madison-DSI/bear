@@ -1,6 +1,8 @@
 import argparse
+from pathlib import Path
 
 import httpx
+import pandas as pd
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -9,7 +11,6 @@ from tenacity import (
 )
 
 from bear.settings import CONFIG, LOGGER
-from bear.staging import LocalDumper
 
 
 def get_openalex_institution_id(name: str) -> str:
@@ -48,10 +49,23 @@ def get_page_results(query: str, cursor: str = "*") -> tuple[str, list[dict]]:
         raise
 
 
-def crawl(query: str, cursor: str = "*", output_prefix: str = "works") -> None:
+def _dump(data: list[dict], filename: Path) -> None:
+    """Dump data to a file."""
+
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(data)
+    df.to_parquet(filename, index=False)
+    LOGGER.info(f"Dumped {len(data)} records to {filename}")
+
+
+def crawl(
+    query: str,
+    cursor: str = "*",
+    output_prefix: str = "works",
+    save_path: Path = Path("tmp/openalex_data"),
+) -> None:
     """Crawl the OpenAlex API and dump the results to local storage."""
 
-    dumper = LocalDumper()
     all_results = []
     part = 0
     total = 0
@@ -68,14 +82,14 @@ def crawl(query: str, cursor: str = "*", output_prefix: str = "works") -> None:
         LOGGER.info(f"Retrieved {total} results...")
 
         # Checkpointing
-        if len(all_results) >= 10000:
-            dumper.dump(all_results, f"{output_prefix}-{part}-{cursor}.parquet")
+        if len(all_results) >= 5000:
+            _dump(all_results, save_path / f"{output_prefix}-{part}-{cursor}.parquet")
             part += 1
             all_results = []
 
     # Dump any remaining results to local storage
     if all_results:
-        dumper.dump(all_results, f"{output_prefix}-{part}-last.parquet")
+        _dump(all_results, save_path / f"{output_prefix}-{part}-last.parquet")
     LOGGER.info(f"Crawling complete. Total results: {total}")
 
 

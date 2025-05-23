@@ -1,6 +1,10 @@
-# openalex-search
+# Backend for Embedded Academic Resources (BEAR)
 
-Backend swapping experiment for [faculty search](https://github.com/UW-Madison-DSI/faculty-search)
+## Note to self
 
-- [Demo API docs](https://oa-api.services.dsi.wisc.edu/docs)
-- [Example query](https://oa-api.services.dsi.wisc.edu/search?query=corn%20and%20fungicide&top_k=10)
+1. Install dependencies: `uv sync`
+1. Crawl data from OpenAlex with your institution: e.g., `uv run bear/crawler.py uw-madison`
+1. Spin up a vector store backend (TBC). I want the speed of Milvus, but the convenient of PGVector...
+1. Run ingest
+1. Go to Minimalist Frontend
+1. Maybe MCP

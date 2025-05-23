@@ -3,8 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    depends_on:
-      - postgres
     environment:
       - POSTGRES_URL=$POSTGRES_URL
     networks:
