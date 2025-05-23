@@ -8,17 +8,16 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")  # Load env vars from .env file
 
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
-    OPENAI_API_KEY: str
-    POSTGRES_URL: str
-    POSTGRES_LOCAL_URL: str
-    EMBEDDING_MODEL: str
-    EMBEDDING_DIMS: int
-    HNSW_M: int
-    HNSW_EF_CONSTRUCTION: int
-    CONTACT_EMAIL: str
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "bear"
+    POSTGRES_URL: str = "postgresql://postgres:postgres@localhost:5432/bear"
+    OPENAI_API_KEY: str = "your-openai-api-key"
+    EMBEDDING_MODEL: str = "text-embedding-ada-002"
+    EMBEDDING_DIMS: int = 1536
+    HNSW_M: int = 32
+    HNSW_EF_CONSTRUCTION: int = 512
+    CONTACT_EMAIL: str | None = None
 
 
 def make_logger() -> logging.Logger:
@@ -36,4 +35,4 @@ def make_logger() -> logging.Logger:
 
 
 LOGGER = make_logger()
-CONFIG = Config()  # type: ignore
+CONFIG = Config()
