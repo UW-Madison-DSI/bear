@@ -5,7 +5,7 @@ WORKDIR /workspace
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
-    curl build-essential git unzip fontconfig wget ansible postgresql-client \
+    curl build-essential git unzip fontconfig wget postgresql-client \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,10 +27,6 @@ RUN curl -sS https://starship.rs/install.sh | sh -s -- -y && \
 ADD https://astral.sh/uv/install.sh /uv-installer.sh
 RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin/:$PATH"
-
-# Configure Ansible aliases
-RUN echo "alias enc='ansible-vault encrypt .env --output .env.enc'" >> ~/.bashrc && \
-    echo "alias dec='ansible-vault decrypt .env.enc --output .env'" >> ~/.bashrc
 
 # Install MinIO client
 RUN curl -O https://dl.min.io/client/mc/release/linux-amd64/mc && \
