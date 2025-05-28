@@ -35,3 +35,8 @@ build-backend = "hatchling.build"
 include = [
     "bear/**",
 ]
+
+[dependency-groups]
+dev = [
+    "faker>=37.3.0",
+]
