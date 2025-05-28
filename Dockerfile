@@ -19,8 +19,8 @@ COPY uv.lock .
 RUN uv sync --frozen
 
 # Copy the application
-COPY openalex_search ./openalex_search
+COPY bear ./bear
 
 # Inject app_type specific commands
-CMD ["uv", "run", "fastapi", "run", "openalex_search/api.py", "--port", "8000"]
+CMD ["uv", "run", "fastapi", "run", "bear/api.py", "--port", "8000"]
 
