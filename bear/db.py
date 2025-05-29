@@ -20,7 +20,7 @@ from bear.settings import CONFIG
 
 load_dotenv()
 
-ENGINE = create_engine(CONFIG.POSTGRES_LOCAL_URL)
+ENGINE = create_engine(CONFIG.POSTGRES_URL)
 
 
 def recover_abstract(abstract_inverted_index: dict[str, list[int]]) -> str:
@@ -53,7 +53,7 @@ class Work(SQLModel, table=True):
     landing_page_url: str | None
     abstract: str | None = Field(default=None)
     embedding: Any = Field(
-        default=None, sa_column=Column(Vector(CONFIG.EMBEDDING_DIMS))
+        default=None, sa_column=Column(Vector(CONFIG.DEFAULT_EMBEDDING_DIMS))
     )
 
     @staticmethod
@@ -161,8 +161,8 @@ def init(wipe: bool = False) -> None:
             Work.embedding,
             postgresql_using="hnsw",
             postgresql_with={
-                "m": CONFIG.HNSW_M,
-                "ef_construction": CONFIG.HNSW_EF_CONSTRUCTION,
+                "m": CONFIG.DEFAULT_HNSW_M,
+                "ef_construction": CONFIG.DEFAULT_HNSW_EF_CONSTRUCTION,
             },
             postgresql_ops={"embedding": "vector_ip_ops"},
         )

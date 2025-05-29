@@ -8,6 +8,10 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")  # Load env vars from .env file
 
+    MINIO_ACCESS_KEY: str
+    MINIO_SECRET_KEY: str
+    MILVUS_TOKEN: str
+
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "bear"
@@ -19,8 +23,11 @@ class Config(BaseSettings):
 
     # This is the default embedding settings for all documents, which can be overridden in the per-document settings.
     DEFAULT_EMBEDDING_PROVIDER: str = "openai"
-    DEFAULT_EMBEDDING_MODEL: str = "text-embedding-ada-002"
-    DEFAULT_EMBEDDING_DIMS: int = 1536
+    DEFAULT_EMBEDDING_SERVER_URL: str = ""
+    DEFAULT_EMBEDDING_MODEL: str = "text-embedding-3-large"
+    DEFAULT_EMBEDDING_DIMS: int = 3072
+    DEFAULT_EMBEDDING_MAX_TOKENS: int = 8191
+
     DEFAULT_HNSW_M: int = 32
     DEFAULT_HNSW_EF_CONSTRUCTION: int = 512
 
