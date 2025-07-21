@@ -83,7 +83,6 @@ def embed_works(works: list[Work], batch_size: int = 100) -> list[Work]:
     """Embed a list of works in batch."""
 
     embedder = get_embedder()
-
     for i in range(0, len(works), batch_size):
         LOGGER.info(f"Embedding works {i} to {i + batch_size}")
         batch = works[i : i + batch_size]

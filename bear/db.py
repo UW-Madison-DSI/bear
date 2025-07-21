@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, TypeVar
 
-import requests
+import httpx
 from dotenv import load_dotenv
 from pgvector.sqlalchemy import Vector
 from sqlmodel import (
@@ -52,9 +52,7 @@ class Work(SQLModel, table=True):
     pdf_url: str | None
     landing_page_url: str | None
     abstract: str | None = Field(default=None)
-    embedding: Any = Field(
-        default=None, sa_column=Column(Vector(CONFIG.DEFAULT_EMBEDDING_DIMS))
-    )
+    embedding: Any = Field(default=None, sa_column=Column(Vector(CONFIG.DEFAULT_EMBEDDING_DIMS)))
 
     @staticmethod
     def parse(data: dict) -> dict:
@@ -72,11 +70,7 @@ class Work(SQLModel, table=True):
         except (KeyError, TypeError):
             journal = None
 
-        abstract = (
-            recover_abstract(data["abstract_inverted_index"])
-            if data.get("abstract_inverted_index")
-            else None
-        )
+        abstract = recover_abstract(data["abstract_inverted_index"]) if data.get("abstract_inverted_index") else None
 
         return dict(
             id=data["id"],
@@ -99,7 +93,7 @@ class Work(SQLModel, table=True):
     @classmethod
     def pull(cls, doi: str) -> "Work":
         """Pull a work from the OpenAlex by DOI."""
-        response = requests.get(f"https://api.openalex.org/works/doi:{doi}")
+        response = httpx.get(f"https://api.openalex.org/works/doi:{doi}")
         response.raise_for_status()
         data = response.json()
         return cls(**cls.parse(data))
