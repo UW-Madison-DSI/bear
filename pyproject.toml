@@ -5,38 +5,28 @@ description = "Backend for Embedded Academic Resources (BEAR)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "boto3>=1.35.63",
-    "fastapi[standard]>=0.115.5",
-    "fastparquet>=2024.11.0",
+    "fastapi>=0.116.1",
     "httpx>=0.28.1",
-    "ipykernel>=6.29.5",
-    "openai>=1.54.4",
-    "pandas>=2.2.3",
-    "pgvector>=0.3.6",
-    "psycopg2-binary>=2.9.10",
-    "pyarrow>=20.0.0",
-    "pydantic>=2.9.2",
-    "pydantic-settings>=2.9.1",
-    "pymilvus>=2.5.10",
-    "python-dotenv>=1.0.1",
-    "requests>=2.32.3",
-    "sqlmodel>=0.0.22",
-    "streamlit>=1.42.2",
+    "openai>=1.97.0",
+    "pandas>=2.3.1",
+    "pydantic>=2.11.7",
+    "pymilvus>=2.5.14",
+    "python-dotenv>=1.1.1",
     "tenacity>=9.1.2",
-    "tiktoken>=0.8.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-
 [tool.hatch.build]
 include = [
-    "bear/**",
+    "bear/**/*.py",
 ]
 
 [dependency-groups]
 dev = [
-    "faker>=37.3.0",
+    "ipykernel",
+    "pytest",
+    "tqdm",
 ]

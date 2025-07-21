@@ -2,8 +2,6 @@ from enum import StrEnum
 from typing import Protocol
 
 import httpx
-import tiktoken
-from openai import OpenAI
 
 from bear.db import Work
 from bear.settings import CONFIG, LOGGER
@@ -24,28 +22,20 @@ class OpenAIEmbedder:
     """Embedder using OpenAI's API."""
 
     def __init__(self, model: str, max_tokens: int) -> None:
-        self.client = OpenAI()
+        try:
+            import openai
+        except ImportError:
+            raise ImportError("OpenAI package is required for OpenAIEmbedder.")
+
+        self.client = openai.OpenAI()
         self.model = model
         self.max_tokens = max_tokens
 
     def embed(self, text: str | list[str]) -> list[list[float]]:
         """Use OpenAI to embed text into a vector representation."""
 
-        if isinstance(text, str):
-            text = self.trim_text(text)
-        elif isinstance(text, list):
-            text = [self.trim_text(t) for t in text]
-
         response = self.client.embeddings.create(model=self.model, input=text)
         return [v.embedding for v in response.data]
-
-    def trim_text(self, text: str) -> str:
-        """Trim text to a maximum number of tokens."""
-
-        encoder = tiktoken.encoding_for_model(self.model)
-        tokens = encoder.encode(text)
-        trimmed_tokens = tokens[: self.max_tokens]
-        return encoder.decode(trimmed_tokens)
 
 
 class TextEmbeddingInferenceEmbedder:
@@ -75,9 +65,7 @@ class TextEmbeddingInferenceEmbedder:
         return response.json()
 
 
-def get_embedder(
-    provider: str = CONFIG.DEFAULT_EMBEDDING_PROVIDER, **kwargs
-) -> Embedder:
+def get_embedder(provider: str = CONFIG.DEFAULT_EMBEDDING_PROVIDER, **kwargs) -> Embedder:
     """Get the embedder instance based on configuration."""
 
     provider = Provider(provider.lower())
