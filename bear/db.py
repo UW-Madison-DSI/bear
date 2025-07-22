@@ -33,163 +33,13 @@ def get_milvus_client():
     return _milvus_client
 
 
-def recover_abstract(abstract_inverted_index: dict[str, list[int]]) -> str:
-    """Recover the abstract from the inverted index."""
-    if not abstract_inverted_index:
-        return ""
-    
-    word_positions = []
-    for word, positions in abstract_inverted_index.items():
-        if positions is not None and len(positions) > 0:  # Handle numpy arrays and lists
-            for pos in positions:
-                word_positions.append((pos, word))
-
-    # Sort by positions
-    word_positions.sort(key=lambda x: x[0])
-    abstract = " ".join(word for _, word in word_positions)
-    return abstract
-
-
-class Work(BaseModel):
-    """Work model for Milvus storage."""
-    id: str = Field(primary_key=True)
-    doi: str | None = None
-    title: str | None = None
-    display_name: str | None = None
-    journal: str | None = None
-    publication_year: int
-    publication_date: str
-    type: str
-    cited_by_count: int
-    is_retracted: bool
-    is_paratext: bool
-    is_oa: bool | None
-    pdf_url: str | None
-    landing_page_url: str | None
-    abstract: str | None = None
-    embedding: list[float] | None = None
-
-    @staticmethod
-    def parse(data: dict) -> dict:
-        """Parse a work from OpenAlex raw data to local Work format."""
-
-        if data["best_oa_location"] is None:
-            data["best_oa_location"] = {
-                "is_oa": None,
-                "pdf_url": None,
-                "landing_page_url": None,
-            }
-
-        try:
-            journal = data["primary_location"]["source"]["display_name"]
-        except (KeyError, TypeError):
-            journal = None
-
-        abstract = recover_abstract(data["abstract_inverted_index"]) if data.get("abstract_inverted_index") else None
-
-        return dict(
-            id=data["id"],
-            doi=data["doi"],
-            title=data["title"],
-            display_name=data["display_name"],
-            journal=journal,
-            publication_year=data["publication_year"],
-            publication_date=data["publication_date"],
-            type=data["type"],
-            cited_by_count=data["cited_by_count"],
-            is_retracted=data["is_retracted"],
-            is_paratext=data["is_paratext"],
-            is_oa=data["best_oa_location"]["is_oa"],
-            pdf_url=data["best_oa_location"]["pdf_url"],
-            landing_page_url=data["best_oa_location"]["landing_page_url"],
-            abstract=abstract,
-        )
-
-    @classmethod
-    def pull(cls, doi: str) -> "Work":
-        """Pull a work from the OpenAlex by DOI."""
-        response = httpx.get(f"https://api.openalex.org/works/doi:{doi}")
-        response.raise_for_status()
-        data = response.json()
-        return cls(**cls.parse(data))
-
-    @classmethod
-    def from_raw(cls, data: dict) -> "Work":
-        """Create a Work from raw data."""
-        return cls(**cls.parse(data))
-
-    def __str__(self) -> str:
-        """Return a string representation of the work."""
-        text = ""
-        if self.title:
-            text += f"title: {self.title}"
-        if self.journal:
-            text += f"\njournal:{self.journal}"
-        if self.abstract:
-            text += f"\nabstract: {self.abstract}"
-        return text
-
-    def to_milvus_dict(self) -> dict:
-        """Convert to dictionary for Milvus insertion."""
-        return {
-            "id": self.id,
-            "doi": self.doi or "",
-            "title": self.title or "",
-            "display_name": self.display_name or "",
-            "journal": self.journal or "",
-            "publication_year": self.publication_year,
-            "publication_date": self.publication_date,
-            "type": self.type,
-            "cited_by_count": self.cited_by_count,
-            "is_retracted": self.is_retracted,
-            "is_paratext": self.is_paratext,
-            "is_oa": self.is_oa if self.is_oa is not None else False,
-            "pdf_url": self.pdf_url or "",
-            "landing_page_url": self.landing_page_url or "",
-            "abstract": self.abstract or "",
-            "embedding": self.embedding or [],
-        }
-
-
-class WorkAuthorship(BaseModel):
-    """Work authorship relationship."""
-    id: int | None = None
-    work_id: str
-    author_position: str
-    author_id: str
-    institution_id: str
-
-
-class Author(BaseModel):
-    """Author model."""
-    id: str
-    orcid: str | None = None
-    display_name: str | None = None
-    display_name_alternatives: str | None = None
-    works_count: int = 0
-    cited_by_count: int = 0
-    last_known_institution: str | None = None
-    works_api_url: str | None = None
-    updated_date: datetime = Field(default_factory=datetime.now)
-
-    def model_dump(self) -> dict:
-        """Convert to dictionary, handling datetime serialization."""
-        data = super().model_dump()
-        if isinstance(data.get("updated_date"), datetime):
-            data["updated_date"] = data["updated_date"].isoformat()
-        return data
-
-
 def create_collection_schema():
     """Create Milvus collection schema for academic works using MilvusClient API."""
     client = get_milvus_client()
-    
+
     # Create schema with dynamic fields enabled
-    schema = MilvusClient.create_schema(
-        auto_id=True,
-        enable_dynamic_field=False
-    )
-    
+    schema = MilvusClient.create_schema(auto_id=True, enable_dynamic_field=False)
+
     # Add fields to schema
     schema.add_field(field_name="pk", datatype=DataType.INT64, is_primary=True)
     schema.add_field(field_name="id", datatype=DataType.VARCHAR, max_length=512)
@@ -208,22 +58,19 @@ def create_collection_schema():
     schema.add_field(field_name="landing_page_url", datatype=DataType.VARCHAR, max_length=2048)
     schema.add_field(field_name="abstract", datatype=DataType.VARCHAR, max_length=65535)
     schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=CONFIG.DEFAULT_EMBEDDING_DIMS)
-    
+
     return schema
 
 
 def create_index_params():
     """Create index parameters for the collection."""
     client = get_milvus_client()
-    
+
     index_params = client.prepare_index_params()
-    
+
     # Add index for primary key
-    index_params.add_index(
-        field_name="pk",
-        index_type="AUTOINDEX"
-    )
-    
+    index_params.add_index(field_name="pk", index_type="AUTOINDEX")
+
     # Add index for embedding field
     index_params.add_index(
         field_name="embedding",
@@ -232,9 +79,9 @@ def create_index_params():
         params={
             "M": CONFIG.DEFAULT_HNSW_M,
             "efConstruction": CONFIG.DEFAULT_HNSW_EF_CONSTRUCTION,
-        }
+        },
     )
-    
+
     return index_params
 
 
@@ -242,29 +89,25 @@ def init(wipe: bool = False) -> None:
     """Initialize Milvus collection."""
     client = get_milvus_client()
     collection_name = CONFIG.MILVUS_COLLECTION_NAME
-    
+
     # Drop collection if wipe is requested
     if wipe and client.has_collection(collection_name):
         client.drop_collection(collection_name)
         LOGGER.info(f"Dropped existing collection: {collection_name}")
-    
+
     # Create collection if it doesn't exist
     if not client.has_collection(collection_name):
         schema = create_collection_schema()
         index_params = create_index_params()
-        
+
         # Create collection
-        client.create_collection(
-            collection_name=collection_name,
-            schema=schema,
-            index_params=index_params
-        )
+        client.create_collection(collection_name=collection_name, schema=schema, index_params=index_params)
         LOGGER.info(f"Created collection: {collection_name}")
-        
+
         # Verify collection is loaded
         load_state = client.get_load_state(collection_name)
         LOGGER.info(f"Collection {collection_name} load state: {load_state}")
-        
+
     else:
         LOGGER.info(f"Collection {collection_name} already exists")
         # Ensure collection is loaded
@@ -281,16 +124,16 @@ def push(records: list[Record]) -> None:
     """Push records to Milvus (only Works are supported in vector store)."""
     if not records:
         return
-        
+
     # Filter only Work records for Milvus storage
     works = [r for r in records if isinstance(r, Work)]
     if not works:
         LOGGER.info("No Work records to push to Milvus")
         return
-    
+
     client = get_milvus_client()
     collection_name = CONFIG.MILVUS_COLLECTION_NAME
-    
+
     # Convert works to Milvus format
     entities = []
     for work in tqdm(works, desc="Preparing works for insertion"):
@@ -299,13 +142,10 @@ def push(records: list[Record]) -> None:
         if not work_dict["embedding"]:
             continue
         entities.append(work_dict)
-    
+
     if entities:
         try:
-            result = client.insert(
-                collection_name=collection_name,
-                data=entities
-            )
+            result = client.insert(collection_name=collection_name, data=entities)
             LOGGER.info(f"Inserted {len(entities)} works into Milvus. Insert count: {result['insert_count']}")
         except Exception as e:
             LOGGER.error(f"Failed to insert works into Milvus: {e}")
@@ -314,7 +154,7 @@ def push(records: list[Record]) -> None:
 
 def get_author(id: str) -> Author:
     """Get an author by id. Note: Authors are not stored in Milvus in this implementation."""
-    # This is a simplified implementation - in a real system you might want to 
+    # This is a simplified implementation - in a real system you might want to
     # store authors in a separate system or include them in the Milvus schema
     raise NotImplementedError("Author retrieval not implemented in Milvus-only backend")
 
@@ -323,12 +163,12 @@ def search_works(query_embedding: list[float], top_k: int = 10) -> list[dict]:
     """Search for works using vector similarity."""
     client = get_milvus_client()
     collection_name = CONFIG.MILVUS_COLLECTION_NAME
-    
+
     search_params = {
         "metric_type": CONFIG.DEFAULT_METRIC_TYPE,
         "params": {"ef": max(top_k * 2, 64)},  # ef should be larger than top_k
     }
-    
+
     results = client.search(
         collection_name=collection_name,
         data=[query_embedding],
@@ -336,13 +176,24 @@ def search_works(query_embedding: list[float], top_k: int = 10) -> list[dict]:
         search_params=search_params,
         limit=top_k,
         output_fields=[
-            "id", "doi", "title", "display_name", "journal", 
-            "publication_year", "publication_date", "type", 
-            "cited_by_count", "is_retracted", "is_paratext", 
-            "is_oa", "pdf_url", "landing_page_url", "abstract"
-        ]
+            "id",
+            "doi",
+            "title",
+            "display_name",
+            "journal",
+            "publication_year",
+            "publication_date",
+            "type",
+            "cited_by_count",
+            "is_retracted",
+            "is_paratext",
+            "is_oa",
+            "pdf_url",
+            "landing_page_url",
+            "abstract",
+        ],
     )
-    
+
     # Convert results to list of dictionaries
     search_results = []
     for result_set in results:
@@ -350,5 +201,5 @@ def search_works(query_embedding: list[float], top_k: int = 10) -> list[dict]:
             result_dict = result["entity"]
             result_dict["score"] = result["distance"]
             search_results.append(result_dict)
-    
+
     return search_results
