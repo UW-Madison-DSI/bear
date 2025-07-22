@@ -22,10 +22,14 @@ def read_root():
 
 
 class SearchResults(BaseModel):
-    name: str = Field(validation_alias="display_name")
-    open_alex_url: str = Field(validation_alias="id")
+    name: str
+    open_alex_url: str
     orcid: str | None
     score: float
+    doi: str | None = None
+    journal: str | None = None
+    publication_year: int | None = None
+    abstract: str | None = None
 
 
 @app.get("/search", response_model=list[SearchResults])
