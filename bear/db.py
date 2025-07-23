@@ -13,7 +13,7 @@ def get_milvus_client():
     """Get or create Milvus client."""
     uri = f"http://{config.MILVUS_HOST}:{config.MILVUS_PORT}"
     token = config.MILVUS_TOKEN if config.MILVUS_TOKEN else ""
-    return MilvusClient(uri=uri, token=token)
+    return MilvusClient(uri=uri, token=str(token))
 
 
 def create_milvus_collection(client: MilvusClient, model: Any) -> None:  # TODO: Better typing with ABC
