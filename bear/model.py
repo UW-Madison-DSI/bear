@@ -57,26 +57,28 @@ class Work(BaseModel):
 
     # OpenAlex Works fields
     primary_key: Annotated[int | None, Field(default=None), WithJsonSchema({"datatype": DataType.INT64, "is_primary": True})]
-    id: Annotated[str, WithJsonSchema({"datatype": DataType.INT64, "index_configs": {"index_type": "AUTOINDEX"}})]
-    doi: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "index_configs": {"index_type": "AUTOINDEX"}})]
-    title: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048})]
-    display_name: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048})]
-    publication_year: Annotated[int, WithJsonSchema({"datatype": DataType.INT64})]
-    publication_date: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 32})]
-    type: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 256})]
-    cited_by_count: Annotated[int, WithJsonSchema({"datatype": DataType.INT64})]
-    is_retracted: Annotated[bool | None, WithJsonSchema({"datatype": DataType.BOOL})]
-    is_paratext: Annotated[bool | None, WithJsonSchema({"datatype": DataType.BOOL})]
-    cited_by_api_url: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048})]
+    id: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "index_configs": {"index_type": "AUTOINDEX"}, "nullable": True})]
+    doi: Annotated[
+        str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "index_configs": {"index_type": "AUTOINDEX"}, "nullable": True})
+    ]
+    title: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
+    display_name: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
+    publication_year: Annotated[int | None, WithJsonSchema({"datatype": DataType.INT64, "nullable": True})]
+    publication_date: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 32, "nullable": True})]
+    type: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 256, "nullable": True})]
+    cited_by_count: Annotated[int | None, WithJsonSchema({"datatype": DataType.INT64, "nullable": True})]
+    is_retracted: Annotated[bool | None, WithJsonSchema({"datatype": DataType.BOOL, "nullable": True})]
+    is_paratext: Annotated[bool | None, WithJsonSchema({"datatype": DataType.BOOL, "nullable": True})]
+    cited_by_api_url: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
     abstract_inverted_index: Annotated[dict[str, list[int]], Field(default_factory=dict), WithJsonSchema({"datatype": DataType.JSON})]
 
     # Additional field via default works API
-    source_id: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512})]
-    source_display_name: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512})]
+    source_id: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "nullable": True})]
+    source_display_name: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "nullable": True})]
     topics: Annotated[list[str], Field(default_factory=list), WithJsonSchema({"datatype": DataType.JSON})]
-    is_oa: Annotated[bool | None, Field(default=None), WithJsonSchema({"datatype": DataType.BOOL})]
-    pdf_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048})]
-    landing_page_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048})]
+    is_oa: Annotated[bool | None, Field(default=None), WithJsonSchema({"datatype": DataType.BOOL, "nullable": True})]
+    pdf_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
+    landing_page_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
 
     embedding: Annotated[
         list[float],
