@@ -24,7 +24,25 @@ class Provider(StrEnum):
 
 
 class Embedder(Protocol):
-    """Protocol for embedding text into vector representations."""
+    """Protocol for embedding text into vector representations.
+
+    Example:
+        ```python
+        from bear.config import config
+        from bear.embedding import get_embedder
+
+        embedder = get_embedder(config.embedding_config)
+
+        # Show info
+        print(embedder.info)
+
+        # Embed a document
+        embedder.embed("hi", text_type="doc")
+
+        # Embed a query
+        embedder.embed("What is good at cooking?", text_type="query")
+        ```
+    """
 
     def embed(self, text: str | list[str], text_type: TextType) -> list[list[float]]: ...
 
