@@ -7,7 +7,6 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
-    "ipython-sql>=0.5.0",
     "openai>=1.97.0",
     "pandas>=2.3.1",
     "psycopg2-binary>=2.9.10",
@@ -31,6 +30,8 @@ include = [
 
 [dependency-groups]
 dev = [
+    "ipython-sql>=0.5.0",
+    "faker>=37.4.2",
     "ipykernel",
     "pytest",
 ]
