@@ -12,7 +12,7 @@ from tenacity import (
 )
 from tqdm import tqdm
 
-from bear.settings import CONFIG, LOGGER
+from bear.config import config, logger
 
 
 def strip_oa_prefix(id: str) -> str:
@@ -42,8 +42,8 @@ def get_openalex_id(entity_type: str, name: str) -> str:
         raise ValueError("entity_type must be 'authors' or 'institutions'")
 
     url = f"https://api.openalex.org/{entity_type}?search={name}"
-    if CONFIG.OPENALEX_MAILTO_EMAIL:
-        url += f"&mailto={CONFIG.OPENALEX_MAILTO_EMAIL}"
+    if config.OPENALEX_MAILTO_EMAIL:
+        url += f"&mailto={config.OPENALEX_MAILTO_EMAIL}"
 
     try:
         response = httpx.get(url)
@@ -53,10 +53,10 @@ def get_openalex_id(entity_type: str, name: str) -> str:
         if not results:
             raise ValueError(f"No {entity_type.rstrip('s')} found for query: {name}")
 
-        LOGGER.info(f"Found: {results[0]['display_name']} ({results[0]['id']})")
+        logger.info(f"Found: {results[0]['display_name']} ({results[0]['id']})")
         return strip_oa_prefix(results[0]["id"])
     except (httpx.HTTPError, httpx.TimeoutException) as e:
-        LOGGER.warning(f"Error retrieving {entity_type} ID: {str(e)}. Retrying...")
+        logger.warning(f"Error retrieving {entity_type} ID: {str(e)}. Retrying...")
         raise
 
 
@@ -71,8 +71,8 @@ def _get_page_results(endpoint: str, query: str, cursor: str = "*") -> tuple[str
 
     url = f"https://api.openalex.org/{endpoint}?filter={query}&per-page=100&cursor={cursor}"
 
-    if CONFIG.OPENALEX_MAILTO_EMAIL:
-        url += f"&mailto={CONFIG.OPENALEX_MAILTO_EMAIL}"
+    if config.OPENALEX_MAILTO_EMAIL:
+        url += f"&mailto={config.OPENALEX_MAILTO_EMAIL}"
 
     try:
         response = httpx.get(url, timeout=30.0)
@@ -82,7 +82,7 @@ def _get_page_results(endpoint: str, query: str, cursor: str = "*") -> tuple[str
         results = response.json()["results"]
         return cursor, results
     except (httpx.HTTPError, httpx.TimeoutException) as e:
-        LOGGER.warning(f"Error retrieving results: {str(e)}. Retrying...")
+        logger.warning(f"Error retrieving results: {str(e)}. Retrying...")
         raise
 
 
@@ -109,10 +109,7 @@ def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, 
     round_trips = 0
     while True:
         if limit > 0 and round_trips >= limit:
-            LOGGER.warning(
-                f"Reached API call limit of {limit} for endpoint '{endpoint}' with query: {query}. "
-                "Results will be incomplete."
-            )
+            logger.warning(f"Reached API call limit of {limit} for endpoint '{endpoint}' with query: {query}. Results will be incomplete.")
             break
 
         cursor, results = _get_page_results(endpoint, query, cursor)
@@ -121,7 +118,7 @@ def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, 
         if not results:
             break
         all_results.extend(results)
-        LOGGER.info(f"Retrieved {len(all_results)} results so far for query: {query}")
+        logger.info(f"Retrieved {len(all_results)} results so far for query: {query}")
     return all_results
 
 
@@ -131,7 +128,7 @@ def _dump(data: list[dict], filename: Path) -> None:
     filename.parent.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(data)
     df.to_parquet(filename, index=False)
-    LOGGER.info(f"Dumped {len(data)} records to {filename}")
+    logger.info(f"Dumped {len(data)} records to {filename}")
 
 
 def crawl(
@@ -148,7 +145,7 @@ def crawl(
     # Get all authors affiliated with the institution
     institution_id = get_openalex_id("institutions", institution)
 
-    LOGGER.info(f"Fetching authors for institution ID: {institution_id}")
+    logger.info(f"Fetching authors for institution ID: {institution_id}")
     query_authors = f"last_known_institutions.id:{institution_id}"
     authors = query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit)
     _dump(authors, filename=save_path / "authors.parquet")
