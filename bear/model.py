@@ -12,30 +12,6 @@ def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
-class EmbeddingConfig(BaseModel):
-    provider: str = config.DEFAULT_EMBEDDING_PROVIDER
-    model_id: str = config.DEFAULT_EMBEDDING_MODEL
-    dimensions: int = config.DEFAULT_EMBEDDING_DIMS
-
-    # Index settings
-    index_type: str = config.DEFAULT_INDEX_TYPE
-    metric_type: str = config.DEFAULT_METRIC_TYPE
-    hnsw_m: int = config.DEFAULT_HNSW_M
-    hnsw_ef_construction: int = config.DEFAULT_HNSW_EF_CONSTRUCTION
-
-    @property
-    def index_config(self) -> dict:
-        """Return the index configuration dict for Milvus. Note. Missing `field_name` should be injected from the model definition."""
-        return {
-            "index_type": self.index_type,
-            "metric_type": self.metric_type,
-            "params": {
-                "M": self.hnsw_m,
-                "efConstruction": self.hnsw_ef_construction,
-            },
-        }
-
-
 class Work(BaseModel):
     """Work model ORM.
 
@@ -83,7 +59,7 @@ class Work(BaseModel):
     embedding: Annotated[
         list[float],
         Field(default_factory=list),
-        WithJsonSchema({"datatype": DataType.FLOAT_VECTOR, "dim": EmbeddingConfig().dimensions, "index_configs": EmbeddingConfig().index_config}),
+        WithJsonSchema({"datatype": DataType.FLOAT_VECTOR, "dim": config.embedding_config.dimensions, "index_configs": config.embedding_config.index_config}),
     ]
 
     @property
