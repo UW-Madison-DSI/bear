@@ -99,7 +99,7 @@ class TestEmbeddingConfig:
             max_tokens=256,
             doc_prefix="",
             query_prefix="",
-            index_type="IVF_FLAT",
+            index_type="HNSW",
             metric_type="L2",
             hnsw_m=64,
             hnsw_ef_construction=1024,
@@ -108,7 +108,7 @@ class TestEmbeddingConfig:
         index_config = config.index_config
 
         expected_config = {
-            "index_type": "IVF_FLAT",
+            "index_type": "HNSW",
             "metric_type": "L2",
             "params": {
                 "M": 64,
