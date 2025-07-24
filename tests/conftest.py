@@ -24,7 +24,6 @@ def clean_environment():
         "MILVUS_HOST",
         "MILVUS_PORT",
         "MILVUS_DB_NAME",
-        "MILVUS_COLLECTION_NAME",
         "OPENALEX_MAILTO_EMAIL",
         "OPENAI_API_KEY",
         "TEI_API_KEY",

@@ -44,7 +44,7 @@ class Embedder(Protocol):
         ```
     """
 
-    def embed(self, text: str | list[str], text_type: TextType) -> list[list[float]]: ...
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]: ...
 
     @property
     def info(self) -> dict[str, Any]: ...
@@ -98,8 +98,11 @@ class OpenAIEmbedder:
         response = self.client.embeddings.create(model=self.model, input=["test"])
         return len(response.data[0].embedding)
 
-    def embed(self, text: str | list[str], text_type: str) -> list[list[float]]:
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]:
         """Use OpenAI to embed text into a vector representation."""
+
+        if isinstance(text_type, str):
+            text_type = TextType(text_type)
 
         assert text_type in (TextType.DOC, TextType.QUERY), "text_type must be either 'doc' or 'query'"
         if text_type == TextType.DOC and self.doc_prefix:
@@ -170,10 +173,12 @@ class TEIEmbedder:
         response = self.client.embeddings.create(model=self.model, input=["test"])
         return len(response.data[0].embedding)
 
-    def embed(self, text: str | list[str], text_type: str) -> list[list[float]]:
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]:
         """Use Text Embedding Inference to embed text into a vector representation."""
 
-        assert text_type in (TextType.DOC, TextType.QUERY), "text_type must be either 'doc' or 'query'"
+        if isinstance(text_type, str):
+            text_type = TextType(text_type)
+
         if text_type == TextType.DOC and self.doc_prefix:
             text = append_prefix(text, self.doc_prefix)
         elif text_type == TextType.QUERY and self.query_prefix:

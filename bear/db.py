@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
 from bear.config import config, logger
-from bear.model import ALL_MODELS
+from bear.model import ALL_RESOURCES
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ def get_milvus_client():
 def create_milvus_collection(client: MilvusClient, model: Any) -> None:  # TODO: Better typing with ABC
     """Create a Milvus collection for the given model."""
 
-    if model not in ALL_MODELS:
+    if model not in ALL_RESOURCES:
         raise ValueError(f"Model {model} is not registered in bear.model.ALL_MODELS.")
 
     collection_name = model.__name__.lower()
@@ -58,7 +58,7 @@ def init(db_name: str = config.MILVUS_DB_NAME) -> None:
 
     client.use_database(db_name)
 
-    for model in ALL_MODELS:
+    for model in ALL_RESOURCES:
         create_milvus_collection(client=client, model=model)
 
 

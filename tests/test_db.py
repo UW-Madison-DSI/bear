@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pymilvus import MilvusClient
 
 from bear.db import create_milvus_collection, get_milvus_client, init
-from bear.model import ALL_MODELS, Work
+from bear.model import ALL_RESOURCES, Work
 
 
 class TestGetMilvusClient:
@@ -140,8 +140,8 @@ class TestInit:
         mock_client.use_database.assert_called_once_with("test_db")
 
         # Verify collections creation for all models
-        assert mock_create_collection.call_count == len(ALL_MODELS)
-        for model in ALL_MODELS:
+        assert mock_create_collection.call_count == len(ALL_RESOURCES)
+        for model in ALL_RESOURCES:
             mock_create_collection.assert_any_call(client=mock_client, model=model)
 
     @patch("bear.db.get_milvus_client")
@@ -163,7 +163,7 @@ class TestInit:
         mock_client.use_database.assert_called_once_with("test_db")
 
         # Verify collections creation still happens
-        assert mock_create_collection.call_count == len(ALL_MODELS)
+        assert mock_create_collection.call_count == len(ALL_RESOURCES)
 
     @patch("bear.db.get_milvus_client")
     @patch("bear.db.create_milvus_collection")
@@ -182,8 +182,8 @@ class TestInit:
         mock_client.use_database.assert_called_once_with(custom_db_name)
 
         # Verify collections creation
-        assert mock_create_collection.call_count == len(ALL_MODELS)
-        for model in ALL_MODELS:
+        assert mock_create_collection.call_count == len(ALL_RESOURCES)
+        for model in ALL_RESOURCES:
             mock_create_collection.assert_any_call(client=mock_client, model=model)
 
     @patch("bear.db.get_milvus_client")
@@ -234,5 +234,5 @@ class TestIntegration:
         mock_client.use_database.assert_called_once_with("test_db")
 
         # Verify collection creation for each model
-        expected_calls = len(ALL_MODELS)
+        expected_calls = len(ALL_RESOURCES)
         assert mock_client.create_collection.call_count == expected_calls

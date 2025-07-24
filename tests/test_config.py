@@ -142,7 +142,6 @@ class TestConfig:
             "MILVUS_HOST",
             "MILVUS_PORT",
             "MILVUS_DB_NAME",
-            "MILVUS_COLLECTION_NAME",
             "OPENALEX_MAILTO_EMAIL",
             "OPENAI_API_KEY",
             "TEI_API_KEY",
@@ -189,7 +188,6 @@ class TestConfig:
         assert config.MILVUS_HOST == "localhost"
         assert config.MILVUS_PORT == 19530
         assert config.MILVUS_DB_NAME == "dev"
-        assert config.MILVUS_COLLECTION_NAME == "academic_works"
 
         # Test API defaults
         assert config.OPENALEX_MAILTO_EMAIL == ""
@@ -259,7 +257,7 @@ class TestConfig:
 
         assert api_key is not None
         assert api_key.get_secret_value() == "test-openai-key"
-        mock_logger.info.assert_called()
+        mock_logger.debug.assert_called()
 
     @patch("bear.config.logger")
     def test_default_embedding_api_key_tei(self, mock_logger, clean_environment):
@@ -272,7 +270,7 @@ class TestConfig:
 
         assert api_key is not None
         assert api_key.get_secret_value() == "test-tei-key"
-        mock_logger.info.assert_called()
+        mock_logger.debug.assert_called()
 
     def test_default_embedding_api_key_unknown_provider(self, clean_environment):
         """Test DEFAULT_EMBEDDING_API_KEY property with unknown provider."""

@@ -1,3 +1,4 @@
+import openai
 import pytest
 
 from bear.config import EmbeddingConfig
@@ -266,9 +267,15 @@ def test_tei_embedder_server_validation_error(monkeypatch):
         TEIEmbedder(model="test-model", max_tokens=100, base_url="http://localhost")
 
 
-def test_embed_assertion_error():
-    """Test that embed methods raise assertion error for invalid text_type."""
+def test_embed_model_not_found_error():
+    """Test that embed methods raise not found error for invalid model."""
     embedder = OpenAIEmbedder(model="test", max_tokens=100)
+    with pytest.raises(openai.NotFoundError):
+        embedder.embed("test", "doc")
 
-    with pytest.raises(AssertionError):
+
+def test_embed_text_type_value_error():
+    """Test that embed methods raise value error for invalid text_type."""
+    embedder = OpenAIEmbedder(model="test", max_tokens=100)
+    with pytest.raises(ValueError):
         embedder.embed("test", "invalid_type")

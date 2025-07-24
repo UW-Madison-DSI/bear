@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Protocol
 
 import httpx
 from pydantic import BaseModel, Field, WithJsonSchema
@@ -12,14 +12,30 @@ def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
-class Work(BaseModel):
-    """Work model ORM.
+class Resource(Protocol):
+    """Protocol for resources that can be stored in Milvus."""
 
-    `pymilvus` don't have any validation build-in, so this model use `pydantic` to validate the data before inserting into Milvus. It also store the Milvus collection schema for collection instantiation. Each the dictionary inside `WithJsonSchema` is a `pymilvus.FieldSchema.to_dict()` used for instantiating the Milvus collection.
+    @staticmethod
+    def parse(raw_data: dict) -> dict: ...
+
+    @classmethod
+    def from_raw(cls, raw_data: dict) -> "Resource": ...
+
+    def to_milvus(self) -> dict: ...
+
+    def __str__(self) -> str:
+        """Return a string representation of the document for embedding."""
+        ...
+
+
+class Work(BaseModel):
+    """Work from OpenAlex.
+
+    This model use `pydantic` to validate the data before inserting into Milvus. It also store the Milvus collection schema for collection instantiation. Each the dictionary inside `WithJsonSchema` is a `pymilvus.FieldSchema.to_dict()` used for instantiating the Milvus collection.
 
     Example:
         ```python
-        from bear.models import Work
+        from bear.model import Work
         from pymilvus import FieldSchema, DataType
 
         title_schema = FieldSchema(name="title", datatype=DataType.VARCHAR, max_length=2048)
@@ -77,29 +93,29 @@ class Work(BaseModel):
         return " ".join(word for _, word in word_positions)
 
     @staticmethod
-    def parse(data: dict) -> dict:
+    def parse(raw_data: dict) -> dict:
         """Parse a work from OpenAlex raw data to local Work format."""
 
-        primary_location = data.get("primary_location") or {}
+        primary_location = raw_data.get("primary_location") or {}
         source = primary_location.get("source") or {}
-        best_oa_location = data.get("best_oa_location") or {}
+        best_oa_location = raw_data.get("best_oa_location") or {}
 
         return {
-            "id": data.get("id"),
-            "doi": data.get("doi"),
-            "title": data.get("title"),
-            "display_name": data.get("display_name"),
-            "publication_year": data.get("publication_year"),
-            "publication_date": data.get("publication_date"),
-            "type": data.get("type"),
-            "cited_by_count": data.get("cited_by_count"),
-            "is_retracted": data.get("is_retracted"),
-            "is_paratext": data.get("is_paratext"),
-            "cited_by_api_url": data.get("cited_by_api_url"),
-            "abstract_inverted_index": _clean_inverted_index(data.get("abstract_inverted_index") or {}),
+            "id": raw_data.get("id"),
+            "doi": raw_data.get("doi"),
+            "title": raw_data.get("title"),
+            "display_name": raw_data.get("display_name"),
+            "publication_year": raw_data.get("publication_year"),
+            "publication_date": raw_data.get("publication_date"),
+            "type": raw_data.get("type"),
+            "cited_by_count": raw_data.get("cited_by_count"),
+            "is_retracted": raw_data.get("is_retracted"),
+            "is_paratext": raw_data.get("is_paratext"),
+            "cited_by_api_url": raw_data.get("cited_by_api_url"),
+            "abstract_inverted_index": _clean_inverted_index(raw_data.get("abstract_inverted_index") or {}),
             "source_id": source.get("id"),
             "source_display_name": source.get("display_name"),
-            "topics": [topic.get("display_name") for topic in data.get("topics", [])],
+            "topics": [topic.get("display_name") for topic in raw_data.get("topics", [])],
             "is_oa": best_oa_location.get("is_oa"),
             "pdf_url": best_oa_location.get("pdf_url"),
             "landing_page_url": best_oa_location.get("landing_page_url"),
@@ -114,9 +130,9 @@ class Work(BaseModel):
         return cls(**cls.parse(data))
 
     @classmethod
-    def from_raw(cls, data: dict) -> "Work":
+    def from_raw(cls, raw_data: dict) -> "Work":
         """Create a Work from raw data."""
-        return cls(**cls.parse(data))
+        return cls(**cls.parse(raw_data))
 
     def __str__(self) -> str:
         """Return a string representation of the work."""
@@ -136,4 +152,4 @@ class Work(BaseModel):
         return self.model_dump()
 
 
-ALL_MODELS = [Work]
+ALL_RESOURCES = [Work]

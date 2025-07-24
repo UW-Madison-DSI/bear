@@ -10,19 +10,21 @@ class EmbeddingConfig(BaseModel):
     model: str
     dimensions: int
     max_tokens: int
-    doc_prefix: str
-    query_prefix: str
+    doc_prefix: str = ""
+    query_prefix: str = ""
     api_key: SecretStr | None = None
 
     # Index settings
-    index_type: str
-    metric_type: str
-    hnsw_m: int
-    hnsw_ef_construction: int
+    index_type: str = "HNSW"
+    metric_type: str = "IP"
+    hnsw_m: int = 64
+    hnsw_ef_construction: int = 256
 
     @property
     def index_config(self) -> dict:
         """Return the index configuration dict for Milvus. Note. Missing `field_name` should be injected from the model definition."""
+        assert self.index_type == "HNSW", "Only HNSW index type is supported in BEAR for now. Send a PR if you need other index types."
+
         return {
             "index_type": self.index_type,
             "metric_type": self.metric_type,
@@ -34,7 +36,7 @@ class EmbeddingConfig(BaseModel):
 
 
 class Config(BaseSettings):
-    """System level Configuration."""
+    """System configuration. Settings are defined in `.env`. Refer to `example.env` for details."""
 
     model_config = SettingsConfigDict(env_file=".env")
 
@@ -50,7 +52,6 @@ class Config(BaseSettings):
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_DB_NAME: str = "dev"
-    MILVUS_COLLECTION_NAME: str = "academic_works"
 
     # External APIs
     OPENALEX_MAILTO_EMAIL: str = ""
@@ -79,10 +80,10 @@ class Config(BaseSettings):
     def DEFAULT_EMBEDDING_API_KEY(self) -> SecretStr | None:
         """Return the default embedding API key based on the provider."""
         if self.DEFAULT_EMBEDDING_PROVIDER == "openai":
-            logger.info(f"Using OpenAI API key for default key: {self.OPENAI_API_KEY}")
+            logger.debug(f"Using OpenAI API key for default key: {self.OPENAI_API_KEY}")
             return self.OPENAI_API_KEY
         elif self.DEFAULT_EMBEDDING_PROVIDER == "tei":
-            logger.info(f"Using Text Embedding Inference API key for default key: {self.TEI_API_KEY}")
+            logger.debug(f"Using Text Embedding Inference API key for default key: {self.TEI_API_KEY}")
             return self.TEI_API_KEY
         return None
 
