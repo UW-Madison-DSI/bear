@@ -1,17 +1,19 @@
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
+from bear import ALL_RESOURCES, Resource, ResourceType
 from bear.config import config, logger
-from bear import ResourceType, Resource, ALL_RESOURCES
 
 load_dotenv()
 
 
-def get_milvus_client():
+def get_milvus_client(db_name: str = config.MILVUS_DB_NAME) -> MilvusClient:
     """Get or create Milvus client."""
     uri = f"http://{config.MILVUS_HOST}:{config.MILVUS_PORT}"
     token = config.MILVUS_TOKEN if config.MILVUS_TOKEN else ""
-    return MilvusClient(uri=uri, token=str(token))
+    client = MilvusClient(uri=uri, token=str(token))
+    client.use_database(db_name)
+    return client
 
 
 def create_milvus_collection(client: MilvusClient, model: type[Resource], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:

@@ -4,11 +4,11 @@ import pandas as pd
 
 from bear.config import logger
 from bear.db import push
-from bear.embedding import embed
+from bear.embedding import embed_resources
 from bear.model import Work
 
 
-def ingest(path: Path) -> None:
+def ingest(path: Path, remove_ingested: bool = False) -> None:
     """Ingest staging file into Milvus."""
 
     logger.info(f"Loading data from {path}")
@@ -17,13 +17,17 @@ def ingest(path: Path) -> None:
     logger.info(f"Data loaded with {len(df)} rows.")
     works = [Work.from_raw(row.to_dict()) for _, row in df.iterrows()]
 
-    works = embed(works)
+    works = embed_resources(works)
     push(works)
     logger.info(f"Ingested {len(works)} works from {path} into Milvus.")
+
+    if remove_ingested:
+        logger.info(f"Removing file {path} after ingestion.")
+        path.unlink()
 
 
 if __name__ == "__main__":
     STAGING_DIR = Path("tmp/openalex_data/works")
     for file in STAGING_DIR.glob("*.parquet"):
-        ingest(file)
+        ingest(file, remove_ingested=False)
     logger.info(f"Ingestion: {STAGING_DIR} complete.")

@@ -88,7 +88,7 @@ class Config(BaseSettings):
         return None
 
     @property
-    def embedding_config(self) -> EmbeddingConfig:
+    def default_embedding_config(self) -> EmbeddingConfig:
         """Return the default embedding configuration."""
         return EmbeddingConfig(
             provider=self.DEFAULT_EMBEDDING_PROVIDER,
