@@ -5,8 +5,8 @@ from typing import Any, Protocol
 import httpx
 from openai import OpenAI
 
+from bear import ResourceType
 from bear.config import EmbeddingConfig, config, logger
-from bear.model import Work
 
 
 class TextType(StrEnum):
@@ -197,14 +197,17 @@ def get_embedder(embedding_config: EmbeddingConfig = config.embedding_config) ->
     raise ValueError(f"Unknown embedding provider: {embedding_config.provider}")
 
 
-def embed_works(works: list[Work], batch_size: int = 100, embedding_config: EmbeddingConfig = config.embedding_config) -> list[Work]:
-    """Embed a list of works in batch."""
+def embed(
+    resources: list[ResourceType], batch_size: int = 256, embedding_config: EmbeddingConfig = config.embedding_config, embedding_field: str = "embedding"
+) -> list[ResourceType]:
+    """Embed a list of resources in batch."""
 
     embedder = get_embedder(embedding_config)
-    for i in range(0, len(works), batch_size):
-        logger.info(f"Embedding works {i} to {i + batch_size}")
-        batch = works[i : i + batch_size]
-        embeddings = embedder.embed(text=[str(work) for work in batch], text_type=TextType.DOC)
-        for work, embedding in zip(batch, embeddings):
-            work.embedding = embedding
-    return works
+    logger.info(f"Using embedder: {embedder.info}")
+    for i in range(0, len(resources), batch_size):
+        logger.info(f"Embedding resources {i} to {i + batch_size}")
+        batch = resources[i : i + batch_size]
+        embeddings = embedder.embed(text=[str(resource) for resource in batch], text_type=TextType.DOC)
+        for resource, embedding in zip(batch, embeddings):
+            setattr(resource, embedding_field, embedding)
+    return resources
