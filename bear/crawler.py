@@ -157,30 +157,38 @@ def crawl(
     author_api_call_limit: int = 0,
     authors_limit: int = 0,
     per_author_work_api_call_limit: int = 0,
-    skip_existing: bool = True,
+    skip_pulling_authors: bool = False,
+    skip_existing_works: bool = True,
 ) -> None:
     """Crawl the OpenAlex API and dump the results to local storage."""
 
     save_path.mkdir(parents=True, exist_ok=True)
 
     # Get existing authors if skip_existing is True
-    if skip_existing and (save_path / "authors").exists():
-        # Get all folder names under works
+    if skip_existing_works and (save_path / "authors").exists():
         existing_authors = [p.name for p in Path("tmp/openalex_data/works/").glob("*/")]
 
-    # Get all authors affiliated with the institution
-    institution_id = get_openalex_id("institutions", institution)
+    if not skip_pulling_authors:
+        # Get all authors affiliated with the institution
+        institution_id = get_openalex_id("institutions", institution)
 
-    logger.info(f"Fetching authors for institution ID: {institution_id}")
-    query_authors = f"last_known_institutions.id:{institution_id}"
-    query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit, save_folder=save_path / "authors")
-    authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
+        logger.info(f"Fetching authors for institution ID: {institution_id}")
+        query_authors = f"last_known_institutions.id:{institution_id}"
+        query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit, save_folder=save_path / "authors")
+        authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
+    else:
+        # If skipping pulling authors, use existing authors from previous runs
+        if (save_path / "authors").exists():
+            authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
+        else:
+            logger.warning("Skipping pulling authors, but no existing authors found.")
+            authors = []
 
     # Get all works authored by the institution's authors
     if authors_limit > 0:
         authors = authors[:authors_limit]
 
-    if skip_existing:
+    if skip_existing_works:
         authors = [a for a in authors if strip_oa_prefix(a["id"]) not in existing_authors]
 
     for author in tqdm(authors):
@@ -202,12 +210,18 @@ def main():
         action="store_true",
         help="Run in test mode with limited API calls.",
     )
+    parser.add_argument(
+        "--skip-pulling-authors",
+        action="store_true",
+        help="Skip pulling authors from OpenAlex, using existing authors instead.",
+    )
     args = parser.parse_args()
     crawl(
         institution=args.institution,
         author_api_call_limit=3 if args.test else 0,
         authors_limit=10 if args.test else 0,
         per_author_work_api_call_limit=3 if args.test else 0,
+        skip_pulling_authors=args.skip_pulling_authors,
     )
 
 
