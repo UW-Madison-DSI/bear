@@ -86,7 +86,7 @@ def _get_page_results(endpoint: str, query: str, cursor: str = "*") -> tuple[str
         raise
 
 
-def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, Any]]:
+def query_openalex(endpoint: str, query: str, limit: int = 0, save_folder: Path | None = None) -> list[dict[str, Any]]:
     """Get all results from the OpenAlex API for a given endpoint and query.
 
     Args:
@@ -94,6 +94,7 @@ def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, 
         query: The filter query for the API.
         limit: The maximum number of pages (round trips) to retrieve.
                If 0 (default), all pages are retrieved.
+        save_folder: Optional folder to save results as a Parquet file.
 
     Example:
         ```python
@@ -104,9 +105,14 @@ def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, 
         query_openalex("authors", "last_known_institutions.id:https://openalex.org/I135310074", limit=3)
         ```
     """
+
+    if save_folder is not None:
+        save_folder.mkdir(parents=True, exist_ok=True)
+
     cursor = "*"
     all_results = []
     round_trips = 0
+    save_counter = 0
     while True:
         if limit > 0 and round_trips >= limit:
             logger.warning(f"Reached API call limit of {limit} for endpoint '{endpoint}' with query: {query}. Results will be incomplete.")
@@ -118,7 +124,21 @@ def query_openalex(endpoint: str, query: str, limit: int = 0) -> list[dict[str, 
         if not results:
             break
         all_results.extend(results)
+
+        # Save results to Parquet file if specified
+        if save_folder and len(all_results) >= 1000:  # Save every 1000 records
+            chunk_file = save_folder / f"chunk_{save_counter}.parquet"
+            logger.info(f"Saving {len(all_results)} results to {chunk_file}")
+            _dump(all_results, chunk_file)
+            save_counter += 1
+            all_results = []  # Reset for next chunk
+
         logger.info(f"Retrieved {len(all_results)} results so far for query: {query}")
+
+    if save_folder and all_results:
+        chunk_file = save_folder / f"chunk_{save_counter}.parquet"
+        logger.info(f"Saving final {len(all_results)} results to {chunk_file}")
+        _dump(all_results, chunk_file)
     return all_results
 
 
@@ -137,27 +157,37 @@ def crawl(
     author_api_call_limit: int = 0,
     authors_limit: int = 0,
     per_author_work_api_call_limit: int = 0,
+    skip_existing: bool = True,
 ) -> None:
     """Crawl the OpenAlex API and dump the results to local storage."""
 
     save_path.mkdir(parents=True, exist_ok=True)
+
+    # Get existing authors if skip_existing is True
+    if skip_existing and (save_path / "authors").exists():
+        # Get all folder names under works
+        existing_authors = [p.name for p in Path("tmp/openalex_data/works/").glob("*/")]
 
     # Get all authors affiliated with the institution
     institution_id = get_openalex_id("institutions", institution)
 
     logger.info(f"Fetching authors for institution ID: {institution_id}")
     query_authors = f"last_known_institutions.id:{institution_id}"
-    authors = query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit)
-    _dump(authors, filename=save_path / "authors.parquet")
+    query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit, save_folder=save_path / "authors")
+    authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
 
     # Get all works authored by the institution's authors
     if authors_limit > 0:
         authors = authors[:authors_limit]
 
+    if skip_existing:
+        authors = [a for a in authors if strip_oa_prefix(a["id"]) not in existing_authors]
+
     for author in tqdm(authors):
-        query_works = f"authorships.author.id:{strip_oa_prefix(author['id'])}"
-        works = query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit)
-        _dump(works, filename=save_path / "works" / f"{strip_oa_prefix(author['id'])}.parquet")
+        author_id = strip_oa_prefix(author["id"])
+
+        query_works = f"authorships.author.id:{author_id}"
+        query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
 
 
 def main():
