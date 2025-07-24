@@ -1,105 +1,210 @@
 from enum import StrEnum
-from typing import Protocol
+from functools import cache
+from typing import Any, Protocol
 
 import httpx
-import tiktoken
 from openai import OpenAI
 
-from bear.db import Work
-from bear.settings import CONFIG, LOGGER
+from bear.config import EmbeddingConfig, config, logger
+from bear.model import Work
 
 
-class Embedder(Protocol):
-    def embed(self, text: str | list[str]) -> list[list[float]]: ...
+class TextType(StrEnum):
+    """Type of text to embed."""
+
+    DOC = "doc"
+    QUERY = "query"
 
 
 class Provider(StrEnum):
     """Embedding providers."""
 
     OPENAI = "openai"
-    TEXT_EMBEDDING_INFERENCE = "text-embedding-inference"
+    TEXT_EMBEDDING_INFERENCE = "tei"
+
+
+class Embedder(Protocol):
+    """Protocol for embedding text into vector representations.
+
+    Example:
+        ```python
+        from bear.config import config
+        from bear.embedding import get_embedder
+
+        embedder = get_embedder(config.embedding_config)
+
+        # Show info
+        print(embedder.info)
+
+        # Embed a document
+        embedder.embed("hi", text_type="doc")
+
+        # Embed a query
+        embedder.embed("What is good at cooking?", text_type="query")
+        ```
+    """
+
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]: ...
+
+    @property
+    def info(self) -> dict[str, Any]: ...
+
+    @classmethod
+    def from_config(cls, embedding_config: EmbeddingConfig) -> "Embedder": ...
+
+
+def append_prefix(text: str | list[str], prefix: str) -> list[str]:
+    """Append a prefix to the text or each item in the list."""
+    if isinstance(text, str):
+        return [f"{prefix} {text}"]
+    return [f"{prefix} {t}" for t in text]
 
 
 class OpenAIEmbedder:
     """Embedder using OpenAI's API."""
 
-    def __init__(self, model: str, max_tokens: int) -> None:
-        self.client = OpenAI()
+    def __init__(self, model: str, max_tokens: int, doc_prefix: str = "", query_prefix: str = "", api_key: str | None = None, **kwargs) -> None:
+        self.client = OpenAI(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
+        self.doc_prefix = doc_prefix
+        self.query_prefix = query_prefix
 
-    def embed(self, text: str | list[str]) -> list[list[float]]:
+    @classmethod
+    def from_config(cls, embedding_config: EmbeddingConfig) -> "OpenAIEmbedder":
+        """Create an OpenAIEmbedder instance from configuration."""
+        return cls(
+            model=embedding_config.model,
+            max_tokens=embedding_config.max_tokens,
+            doc_prefix=embedding_config.doc_prefix,
+            query_prefix=embedding_config.query_prefix,
+            api_key=str(embedding_config.api_key) if embedding_config.api_key else None,
+        )
+
+    @property
+    def info(self) -> dict[str, Any]:
+        """Return information about the OpenAI embedder."""
+        return {
+            "provider": Provider.OPENAI,
+            "model": self.model,
+            "dimensions": self.get_dimensions(),
+            "doc_prefix": self.doc_prefix,
+            "query_prefix": self.query_prefix,
+        }
+
+    @cache
+    def get_dimensions(self) -> int:
+        """Get the dimensions of the embedding model."""
+        response = self.client.embeddings.create(model=self.model, input=["test"])
+        return len(response.data[0].embedding)
+
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]:
         """Use OpenAI to embed text into a vector representation."""
 
-        if isinstance(text, str):
-            text = self.trim_text(text)
-        elif isinstance(text, list):
-            text = [self.trim_text(t) for t in text]
+        if isinstance(text_type, str):
+            text_type = TextType(text_type)
+
+        assert text_type in (TextType.DOC, TextType.QUERY), "text_type must be either 'doc' or 'query'"
+        if text_type == TextType.DOC and self.doc_prefix:
+            text = append_prefix(text, self.doc_prefix)
+        elif text_type == TextType.QUERY and self.query_prefix:
+            text = append_prefix(text, self.query_prefix)
 
         response = self.client.embeddings.create(model=self.model, input=text)
         return [v.embedding for v in response.data]
 
-    def trim_text(self, text: str) -> str:
-        """Trim text to a maximum number of tokens."""
 
-        encoder = tiktoken.encoding_for_model(self.model)
-        tokens = encoder.encode(text)
-        trimmed_tokens = tokens[: self.max_tokens]
-        return encoder.decode(trimmed_tokens)
+class TEIEmbedder:
+    """Embedder using Text Embedding Inference API (via OpenAI python client)."""
 
-
-class TextEmbeddingInferenceEmbedder:
-    """Embedder using Text Embedding Inference API."""
-
-    def __init__(self, model_id: str, base_url: str) -> None:
-        self.model_id = model_id
-        self.client = httpx.Client(base_url=base_url)
+    def __init__(self, model: str, max_tokens: int, base_url: str, api_key: str = "", doc_prefix: str = "", query_prefix: str = "", **kwargs) -> None:
+        self.model = model
+        self.max_tokens = max_tokens
+        self.base_url = base_url
+        self.client = OpenAI(base_url=base_url, api_key=api_key)
+        self.doc_prefix = doc_prefix
+        self.query_prefix = query_prefix
         self._verify_server_match_model()
 
+    @classmethod
+    def from_config(cls, embedding_config: EmbeddingConfig) -> "TEIEmbedder":
+        """Create a TEIEmbedder instance from configuration."""
+        return cls(
+            model=embedding_config.model,
+            max_tokens=embedding_config.max_tokens,
+            base_url=embedding_config.server_url,
+            api_key=str(embedding_config.api_key) if embedding_config.api_key else "",
+            doc_prefix=embedding_config.doc_prefix,
+            query_prefix=embedding_config.query_prefix,
+        )
+
+    @property
+    def info(self) -> dict[str, Any]:
+        """Return information about the TEI embedder."""
+        return {
+            "provider": Provider.TEXT_EMBEDDING_INFERENCE,
+            "model": self.model,
+            "max_tokens": self.max_tokens,
+            "dimensions": self.get_dimensions(),
+            "doc_prefix": self.doc_prefix,
+            "query_prefix": self.query_prefix,
+        }
+
+    @cache
     def _verify_server_match_model(self) -> None:
         """Verify that the base URL matches the system settings."""
 
-        response = self.client.get("/info")
-        response.raise_for_status()
-        server_info = response.json()
-        if server_info.get("model_id") != self.model_id:
+        with httpx.Client(base_url=self.base_url) as client:
+            response = client.get("/info")
+            response.raise_for_status()
+            server_info = response.json()
+
+        if server_info.get("model_id") != self.model:
+            raise ValueError(f"Model ID {self.model} does not match server's model ID {server_info.get('model_id')}.")
+
+        if server_info.get("max_input_length") < config.DEFAULT_EMBEDDING_MAX_TOKENS:
             raise ValueError(
-                f"Model ID {self.model_id} does not match server's model ID {server_info.get('model_id')}."
+                f"Server's max input length {server_info.get('max_input_length')} is less than configured max tokens {config.DEFAULT_EMBEDDING_MAX_TOKENS}."
             )
 
-    def embed(self, text: str | list[str]) -> list[list[float]]:
+    @cache
+    def get_dimensions(self) -> int:
+        """Get the dimensions of the embedding model."""
+        response = self.client.embeddings.create(model=self.model, input=["test"])
+        return len(response.data[0].embedding)
+
+    def embed(self, text: str | list[str], text_type: TextType | str) -> list[list[float]]:
         """Use Text Embedding Inference to embed text into a vector representation."""
 
-        response = self.client.post("/embed", json={"inputs": text, "truncate": True})
-        response.raise_for_status()
-        return response.json()
+        if isinstance(text_type, str):
+            text_type = TextType(text_type)
+
+        if text_type == TextType.DOC and self.doc_prefix:
+            text = append_prefix(text, self.doc_prefix)
+        elif text_type == TextType.QUERY and self.query_prefix:
+            text = append_prefix(text, self.query_prefix)
+
+        response = self.client.embeddings.create(model=self.model, input=text)
+        return [v.embedding for v in response.data]
 
 
-def get_embedder(
-    provider: str = CONFIG.DEFAULT_EMBEDDING_PROVIDER, **kwargs
-) -> Embedder:
+def get_embedder(embedding_config: EmbeddingConfig = config.embedding_config) -> Embedder:
     """Get the embedder instance based on configuration."""
-
-    provider = Provider(provider.lower())
-    if provider == Provider.OPENAI:
-        model = kwargs.get("model", CONFIG.DEFAULT_EMBEDDING_MODEL)
-        max_tokens = kwargs.get("max_tokens", CONFIG.DEFAULT_EMBEDDING_MAX_TOKENS)
-        return OpenAIEmbedder(model=model, max_tokens=max_tokens)
-    elif provider == Provider.TEXT_EMBEDDING_INFERENCE:
-        model_id = kwargs.get("model_id", CONFIG.DEFAULT_EMBEDDING_MODEL)
-        base_url = kwargs.get("base_url", CONFIG.DEFAULT_EMBEDDING_SERVER_URL)
-        return TextEmbeddingInferenceEmbedder(model_id=model_id, base_url=base_url)
+    if embedding_config.provider == "openai":
+        return OpenAIEmbedder.from_config(embedding_config)
+    elif embedding_config.provider == "tei":
+        return TEIEmbedder.from_config(embedding_config)
+    raise ValueError(f"Unknown embedding provider: {embedding_config.provider}")
 
 
-def embed_works(works: list[Work], batch_size: int = 100) -> list[Work]:
+def embed_works(works: list[Work], batch_size: int = 100, embedding_config: EmbeddingConfig = config.embedding_config) -> list[Work]:
     """Embed a list of works in batch."""
 
-    embedder = get_embedder()
-
+    embedder = get_embedder(embedding_config)
     for i in range(0, len(works), batch_size):
-        LOGGER.info(f"Embedding works {i} to {i + batch_size}")
+        logger.info(f"Embedding works {i} to {i + batch_size}")
         batch = works[i : i + batch_size]
-        embeddings = embedder.embed([str(work) for work in batch])
+        embeddings = embedder.embed(text=[str(work) for work in batch], text_type=TextType.DOC)
         for work, embedding in zip(batch, embeddings):
             work.embedding = embedding
     return works
