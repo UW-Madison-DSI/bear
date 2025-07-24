@@ -2,7 +2,7 @@ import openai
 import pytest
 
 from bear.config import EmbeddingConfig
-from bear.embedding import OpenAIEmbedder, Provider, TEIEmbedder, TextType, append_prefix, embed_works, get_embedder
+from bear.embedding import OpenAIEmbedder, Provider, TEIEmbedder, TextType, append_prefix, embed, get_embedder
 from bear.model import Work
 
 
@@ -204,7 +204,7 @@ def test_embed_works(monkeypatch):
         hnsw_m=32,
         hnsw_ef_construction=512,
     )
-    result = embed_works(works, batch_size=2, embedding_config=cfg)
+    result = embed(works, batch_size=2, embedding_config=cfg)
     assert all(hasattr(w, "embedding") and isinstance(w.embedding, list) for w in result)
 
 

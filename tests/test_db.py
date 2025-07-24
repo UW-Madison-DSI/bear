@@ -82,7 +82,7 @@ class TestCreateMilvusCollection:
 
         # Verify collection creation flow
         self.mock_client.has_collection.assert_called_once_with("work")
-        self.mock_client.create_schema.assert_called_once_with(auto_id=True, enable_dynamic_field=True)
+        self.mock_client.create_schema.assert_called_once_with(auto_id=False, enable_dynamic_field=True)
         self.mock_client.prepare_index_params.assert_called_once()
         self.mock_client.create_collection.assert_called_once()
 

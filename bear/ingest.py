@@ -2,32 +2,28 @@ from pathlib import Path
 
 import pandas as pd
 
-from bear.settings import LOGGER
-from bear.db import Work, init, push
-from bear.embedding import embed_works
+from bear.config import logger
+from bear.db import push
+from bear.embedding import embed
+from bear.model import Work
 
 
 def ingest(path: Path) -> None:
     """Ingest staging file into Milvus."""
 
-    # Load the data
-    LOGGER.info(f"Loading data from {path}")
+    logger.info(f"Loading data from {path}")
     df = pd.read_parquet(path)
+
+    logger.info(f"Data loaded with {len(df)} rows.")
     works = [Work.from_raw(row.to_dict()) for _, row in df.iterrows()]
 
-    LOGGER.info(f"Embedding {len(works)} works...")
-    works = embed_works(works)
-
-    # Insert Works into Milvus
-    LOGGER.info("Inserting works into Milvus...")
+    works = embed(works)
     push(works)
-
-    LOGGER.info(f"Data ingested into Milvus: {len(works)} works")
+    logger.info(f"Ingested {len(works)} works from {path} into Milvus.")
 
 
 if __name__ == "__main__":
-    init()
-    STAGING_DIR = Path("tmp")
+    STAGING_DIR = Path("tmp/openalex_data/works")
     for file in STAGING_DIR.glob("*.parquet"):
         ingest(file)
-        LOGGER.info(f"File {file} ingested.")
+    logger.info(f"Ingestion: {STAGING_DIR} complete.")

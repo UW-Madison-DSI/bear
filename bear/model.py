@@ -1,4 +1,4 @@
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Protocol, Self
 
 import httpx
 from pydantic import BaseModel, Field, WithJsonSchema
@@ -9,23 +9,22 @@ from bear.config import config
 
 def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]]:
     """Cleans the abstract inverted index by converting values to lists of int."""
+    if not inverted_index:
+        return {}
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
 class Resource(Protocol):
     """Protocol for resources that can be stored in Milvus."""
 
+    @property
+    def _name(self) -> str: ...  # Name of the resource for Milvus collection
     @staticmethod
-    def parse(raw_data: dict) -> dict: ...
-
+    def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
-    def from_raw(cls, raw_data: dict) -> "Resource": ...
-
-    def to_milvus(self) -> dict: ...
-
-    def __str__(self) -> str:
-        """Return a string representation of the document for embedding."""
-        ...
+    def from_raw(cls, raw_data: dict) -> Self: ...  # Create an instance from raw data
+    def to_milvus(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
+    def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
 
 
 class Work(BaseModel):
@@ -40,6 +39,9 @@ class Work(BaseModel):
 
         title_schema = FieldSchema(name="title", datatype=DataType.VARCHAR, max_length=2048)
         class NewCollectionName(BaseModel):
+
+            # Put Milvus `FieldSchema` inside `WithJsonSchema`.
+            # WithJsonSchema data can be access with `.model_fields["field_name"].metadata[0].json_schema`
             id: Annotated[int, WithJsonSchema({"datatype": DataType.INT64, "is_primary": True})]  # Easier to use
             title: Annotated[str, WithJsonSchema(title_schema.to_dict())]  # Safer to use
             ...
@@ -48,10 +50,9 @@ class Work(BaseModel):
     """
 
     # OpenAlex Works fields
-    primary_key: Annotated[int | None, Field(default=None), WithJsonSchema({"datatype": DataType.INT64, "is_primary": True})]
-    id: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "index_configs": {"index_type": "AUTOINDEX"}, "nullable": True})]
+    id: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "is_primary": True, "max_length": 64, "index_configs": {"index_type": "AUTOINDEX"}})]
     doi: Annotated[
-        str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 512, "index_configs": {"index_type": "AUTOINDEX"}, "nullable": True})
+        str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 256, "index_configs": {"index_type": "AUTOINDEX"}, "nullable": True})
     ]
     title: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
     display_name: Annotated[str | None, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
@@ -72,11 +73,23 @@ class Work(BaseModel):
     pdf_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
     landing_page_url: Annotated[str | None, Field(default=None), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 2048, "nullable": True})]
 
+    # Denormalized authors (Milvus does not support nested objects)
+    author_ids: Annotated[
+        list[str | None],
+        Field(default_factory=list),
+        WithJsonSchema({"datatype": DataType.ARRAY, "element_type": DataType.VARCHAR, "max_capacity": 2048, "nullable": True, "max_length": 64}),
+    ]
+
     embedding: Annotated[
-        list[float],
+        list[float | None],
         Field(default_factory=list),
         WithJsonSchema({"datatype": DataType.FLOAT_VECTOR, "dim": config.embedding_config.dimensions, "index_configs": config.embedding_config.index_config}),
     ]
+
+    @property
+    def _name(self) -> str:
+        """Return the name of the model for Milvus collection."""
+        return self.__class__.__name__.lower()
 
     @property
     def abstract(self) -> str:
@@ -96,9 +109,10 @@ class Work(BaseModel):
     def parse(raw_data: dict) -> dict:
         """Parse a work from OpenAlex raw data to local Work format."""
 
-        primary_location = raw_data.get("primary_location") or {}
-        source = primary_location.get("source") or {}
-        best_oa_location = raw_data.get("best_oa_location") or {}
+        primary_location = raw_data.get("primary_location", {}) or {}
+        source = primary_location.get("source", {}) or {}
+        best_oa_location = raw_data.get("best_oa_location", {}) or {}
+        authorships = raw_data.get("authorships", [])
 
         return {
             "id": raw_data.get("id"),
@@ -112,17 +126,18 @@ class Work(BaseModel):
             "is_retracted": raw_data.get("is_retracted"),
             "is_paratext": raw_data.get("is_paratext"),
             "cited_by_api_url": raw_data.get("cited_by_api_url"),
-            "abstract_inverted_index": _clean_inverted_index(raw_data.get("abstract_inverted_index") or {}),
+            "abstract_inverted_index": _clean_inverted_index(raw_data.get("abstract_inverted_index", {})),
             "source_id": source.get("id"),
             "source_display_name": source.get("display_name"),
             "topics": [topic.get("display_name") for topic in raw_data.get("topics", [])],
-            "is_oa": best_oa_location.get("is_oa"),
+            "is_oa": best_oa_location.get("is_oa", False),
             "pdf_url": best_oa_location.get("pdf_url"),
             "landing_page_url": best_oa_location.get("landing_page_url"),
+            "author_ids": [authorship.get("author", {}).get("id") for authorship in authorships],
         }
 
     @classmethod
-    def pull(cls, doi: str) -> "Work":
+    def pull(cls, doi: str) -> Self:
         """Pull a work from the OpenAlex by DOI."""
         response = httpx.get(f"https://api.openalex.org/works/doi:{doi}")
         response.raise_for_status()
@@ -130,7 +145,7 @@ class Work(BaseModel):
         return cls(**cls.parse(data))
 
     @classmethod
-    def from_raw(cls, raw_data: dict) -> "Work":
+    def from_raw(cls, raw_data: dict) -> Self:
         """Create a Work from raw data."""
         return cls(**cls.parse(raw_data))
 

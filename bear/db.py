@@ -1,10 +1,8 @@
-from typing import Any
-
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
 from bear.config import config, logger
-from bear.model import ALL_RESOURCES
+from bear import ResourceType, Resource, ALL_RESOURCES
 
 load_dotenv()
 
@@ -16,20 +14,20 @@ def get_milvus_client():
     return MilvusClient(uri=uri, token=str(token))
 
 
-def create_milvus_collection(client: MilvusClient, model: Any) -> None:  # TODO: Better typing with ABC
+def create_milvus_collection(client: MilvusClient, model: type[Resource], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:
     """Create a Milvus collection for the given model."""
 
     if model not in ALL_RESOURCES:
         raise ValueError(f"Model {model} is not registered in bear.model.ALL_MODELS.")
 
-    collection_name = model.__name__.lower()
+    collection_name = model.__name__.lower()  # Not instantiated, just use the class name
 
     if client.has_collection(collection_name):
         logger.info(f"Collection '{collection_name}' already exists. Skipping creation.")
         return
 
     # Initialize collection with schema and index parameters
-    schema = client.create_schema(auto_id=True, enable_dynamic_field=True)
+    schema = client.create_schema(auto_id=auto_id, enable_dynamic_field=enable_dynamic_field)
     index_params = client.prepare_index_params()
     for field_name, field_info in model.model_fields.items():
         assert len(field_info.metadata) == 1, f"Field {field_name} should have exactly one metadata entry."
@@ -47,10 +45,16 @@ def create_milvus_collection(client: MilvusClient, model: Any) -> None:  # TODO:
     client.create_collection(collection_name=collection_name, schema=schema, index_params=index_params)
 
 
-def init(db_name: str = config.MILVUS_DB_NAME) -> None:
+def init(db_name: str = config.MILVUS_DB_NAME, wipe: bool = False) -> None:
     """Initialize Milvus collection."""
 
     client = get_milvus_client()
+
+    if wipe and db_name in client.list_databases():
+        logger.info(f"Wiping database: {db_name}")
+        client.use_database(db_name)
+        [client.drop_collection(x) for x in client.list_collections()]
+        client.drop_database(db_name=db_name)
 
     if db_name not in client.list_databases():
         logger.info(f"Creating database: {db_name}")
@@ -62,6 +66,20 @@ def init(db_name: str = config.MILVUS_DB_NAME) -> None:
         create_milvus_collection(client=client, model=model)
 
 
+def push(resources: list[ResourceType], db_name: str = config.MILVUS_DB_NAME) -> None:
+    """Upsert resources into Milvus. This method is slower but ensures no duplicate IDs."""
+    client = get_milvus_client()
+    client.use_database(db_name)
+    collection_name = resources[0]._name
+
+    if not client.has_collection(collection_name):
+        raise ValueError(f"Collection '{collection_name}' does not exist. Please create it first.")
+
+    data = [resource.to_milvus() for resource in resources]
+    client.insert(collection_name=collection_name, data=data)
+    logger.info(f"Inserted {len(resources)} resources into collection '{collection_name}'.")
+
+
 if __name__ == "__main__":
-    init()
+    init(wipe=True)  # TODO: Make this configurable
     logger.info("Milvus collections initialized successfully.")
