@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,8 +7,20 @@ from pydantic import BaseModel
 from bear.model import Work
 from bear.search import SearchEngine
 
-app = FastAPI()
-search_engine = SearchEngine()
+# Global dictionary to store shared resources
+app_state = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize the search engine
+    app_state["search_engine"] = SearchEngine()
+    yield
+    # Shutdown: Clean up resources if needed
+    app_state.clear()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -53,7 +67,9 @@ def search_resource_route(
     since_year: int | None = Query(None, title="Filter results from this year onwards."),
 ):
     try:
-        results = search_engine.search_resource(resource_name=resource_name, query=query, top_k=top_k, min_distance=min_distance, since_year=since_year)
+        results = app_state["search_engine"].search_resource(
+            resource_name=resource_name, query=query, top_k=top_k, min_distance=min_distance, since_year=since_year
+        )
 
         if not results:
             raise HTTPException(status_code=404, detail="No results found.")
@@ -103,7 +119,9 @@ def search_author_route(
     since_year: int | None = Query(None, title="Filter results from this year onwards."),
 ):
     try:
-        results = search_engine.search_author(query=query, top_k=top_k, institutions=institutions, min_distance=min_distance, since_year=since_year)
+        results = app_state["search_engine"].search_author(
+            query=query, top_k=top_k, institutions=institutions, min_distance=min_distance, since_year=since_year
+        )
 
         if not results:
             raise HTTPException(status_code=404, detail="No results found.")

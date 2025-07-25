@@ -17,8 +17,11 @@ def client():
 @pytest.fixture
 def mock_search_engine():
     """Mock SearchEngine for testing."""
-    with patch("bear.api.search_engine") as mock:
-        yield mock
+    with patch("bear.api.app_state") as mock_app_state:
+        mock_engine = patch("bear.search.SearchEngine").start()
+        mock_app_state.__getitem__.return_value = mock_engine
+        yield mock_engine
+        patch.stopall()
 
 
 class TestAPI:

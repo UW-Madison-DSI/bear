@@ -111,7 +111,6 @@ class SearchEngine:
             "limit": top_k,
             "output_fields": output_fields,
             "filter": filter_expr,
-            "search_params": {"metric_type": resource_class.embedding_config().metric_type},
         }
 
         # Execute search

@@ -40,7 +40,7 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")
 
-    # Database
+    # (Optional) OpenAlex data dump database
     POSTGRES_USER: SecretStr | None = None
     POSTGRES_PASSWORD: SecretStr | None = None
     POSTGRES_URL: SecretStr | None = None
