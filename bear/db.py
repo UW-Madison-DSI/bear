@@ -50,11 +50,10 @@ def create_milvus_collection(client: MilvusClient, model: type[Resource], auto_i
 def init(db_name: str = config.MILVUS_DB_NAME, wipe: bool = False) -> None:
     """Initialize Milvus collection."""
 
-    client = get_milvus_client()
+    client = get_milvus_client(db_name=db_name)
 
     if wipe and db_name in client.list_databases():
         logger.info(f"Wiping database: {db_name}")
-        client.use_database(db_name)
         [client.drop_collection(x) for x in client.list_collections()]
         client.drop_database(db_name=db_name)
 

@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 
 import pandas as pd
@@ -26,8 +27,21 @@ def ingest(path: Path, remove_ingested: bool = False) -> None:
         path.unlink()
 
 
+def main() -> None:
+    """Main function to run the ingestion."""
+    parser = argparse.ArgumentParser(description="Ingest OpenAlex data into Milvus.")
+    parser.add_argument("--path", type=str, default="tmp/openalex_data/works", help="Path to the directory containing parquet files to ingest.")
+    parser.add_argument("--test", action="store_true", help="Run in test mode, ingest 10 files.")
+
+    args = parser.parse_args()
+    staging_dir = Path(args.path)
+    files = list(staging_dir.rglob("*.parquet"))
+    files = files[:10] if args.test else files
+
+    for file in files:
+        ingest(file, remove_ingested=True)
+    logger.info(f"Ingestion complete for directory: {staging_dir}")
+
+
 if __name__ == "__main__":
-    STAGING_DIR = Path("tmp/openalex_data/works")
-    for file in STAGING_DIR.glob("*.parquet"):
-        ingest(file, remove_ingested=False)
-    logger.info(f"Ingestion: {STAGING_DIR} complete.")
+    main()
