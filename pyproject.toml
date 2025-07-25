@@ -35,3 +35,10 @@ dev = [
     "ipykernel",
     "pytest",
 ]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocstrings[python]>=0.27.0",
+    "mkdocs-jupyter>=0.25.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "mkdocs-shadcn>=0.8.0",
+]

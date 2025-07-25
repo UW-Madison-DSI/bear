@@ -1,0 +1,68 @@
+site_name: Backend for Embedded Academic Resources (BEAR)
+site_url: https://uw-madison-dsi.github.io/bear
+site_description: Vector Search Made Simple — Like WordPress for Search
+repo_url: https://github.com/uw-madison-dsi/bear
+repo_name: uw-madison-dsi/bear
+
+theme:
+  name: shadcn
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - search.highlight
+    - navigation.top
+    - content.code.copy
+
+plugins:
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            members_order: source
+            filters:
+              - "!^_"  # exclude private members
+  - mkdocs-jupyter:
+      include_source: true
+      execute: false
+  - minify:
+      minify_html: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Usage: usage.md
+  - API Reference:
+      - API: reference/api.md
+      - Config: reference/config.md
+      - Crawler: reference/crawler.md
+      - Database: reference/db.md
+      - Embedding: reference/embedding.md
+      - Ingest: reference/ingest.md
+      - Model: reference/model.md
+      - Search: reference/search.md
+  - Notebooks:
+      - API Usage: notebooks/api_usage.ipynb
+      - Benchmark Inference Servers: notebooks/benchmark_inference_servers.ipynb
+      - Embedder: notebooks/embedder.ipynb
+  - Documentation Guide: DOCS.md
+
+markdown_extensions:
+  - admonition
+  - codehilite:
+      use_pygments: true
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
