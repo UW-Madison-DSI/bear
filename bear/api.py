@@ -87,6 +87,9 @@ def search_resource_route(
 
         return formatted_results
 
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
@@ -107,5 +110,8 @@ def search_author_route(
 
         return [AuthorSearchResult(author_id=result["author_id"], score=result["score"]) for result in results]
 
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Author search failed: {str(e)}")
