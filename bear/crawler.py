@@ -192,10 +192,14 @@ def crawl(
         authors = [a for a in authors if strip_oa_prefix(a["id"]) not in existing_authors]
 
     for author in tqdm(authors):
-        author_id = strip_oa_prefix(author["id"])
+        try:
+            author_id = strip_oa_prefix(author["id"])
 
-        query_works = f"authorships.author.id:{author_id}"
-        query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
+            query_works = f"authorships.author.id:{author_id}"
+            query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
+        except Exception as e:
+            logger.error(f"Error processing author {author_id}: {str(e)}")
+            continue
 
 
 def main():
