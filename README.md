@@ -25,4 +25,4 @@ Finding experts is slow and fragmented. BEAR solves this with:
 
 ## Quick Start
 
-See [Getting Started](getting_started.md).
+See [Getting Started](https://uw-madison-dsi.github.io/bear/getting_started/).
