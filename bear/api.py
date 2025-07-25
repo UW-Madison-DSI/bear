@@ -13,11 +13,10 @@ app_state = {}
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize the search engine
+    """Lifespan event handler for FastAPI to manage startup and shutdown tasks."""
     app_state["search_engine"] = SearchEngine()
     yield
-    # Shutdown: Clean up resources if needed
-    app_state.clear()
+    app_state.clear()  # Clear the app state on shutdown
 
 
 app = FastAPI(lifespan=lifespan)
@@ -34,6 +33,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
+    """Root endpoint to provide instructions for using the API."""
     return {"Instruction": "Try /search_resource?query=your_query_here&top_k=3 or /search_author?query=your_query_here&top_k=3"}
 
 
@@ -66,6 +66,7 @@ def search_resource_route(
     min_distance: float | None = Query(None, title="Minimum distance threshold for results."),
     since_year: int | None = Query(None, title="Filter results from this year onwards."),
 ):
+    """Search for resources based on the provided query and parameters."""
     try:
         results = app_state["search_engine"].search_resource(
             resource_name=resource_name, query=query, top_k=top_k, min_distance=min_distance, since_year=since_year
@@ -118,6 +119,7 @@ def search_author_route(
     min_distance: float | None = Query(None, title="Minimum distance threshold for results."),
     since_year: int | None = Query(None, title="Filter results from this year onwards."),
 ):
+    """Search for authors based on the provided query and parameters."""
     try:
         results = app_state["search_engine"].search_author(
             query=query, top_k=top_k, institutions=institutions, min_distance=min_distance, since_year=since_year

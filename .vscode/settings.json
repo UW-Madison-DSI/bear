@@ -1,8 +1,14 @@
 {
     "cSpell.words": [
         "Chor",
+        "codehilite",
+        "headerlink",
+        "inlinehilite",
         "intfloat",
-        "psql"
+        "linenums",
+        "psql",
+        "pygments",
+        "superfences"
     ],
     "python.testing.pytestArgs": [
         "tests"

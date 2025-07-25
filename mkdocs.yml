@@ -1,6 +1,6 @@
 site_name: Backend for Embedded Academic Resources (BEAR)
 site_url: https://uw-madison-dsi.github.io/bear
-site_description: Vector Search Made Simple — Like WordPress for Search
+site_description: An open-source framework that simplifies embedding integration for academic use, enabling semantic search for experts and interaction with digital twins.
 repo_url: https://github.com/uw-madison-dsi/bear
 repo_name: uw-madison-dsi/bear
 
@@ -10,10 +10,13 @@ theme:
     - navigation.instant
     - navigation.tabs
     - search.highlight
+    - search.suggest
     - navigation.top
     - content.code.copy
-
+extra_css:
+  - assets/css/overrides.css
 plugins:
+  - search
   - mkdocstrings:
       handlers:
         python:
@@ -34,9 +37,9 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - Usage: usage.md
-  - API Reference:
+  - Getting Started: getting_started.md
+  - API Usage: api_usage.ipynb
+  - Developer Reference:
       - API: reference/api.md
       - Config: reference/config.md
       - Crawler: reference/crawler.md
@@ -45,18 +48,16 @@ nav:
       - Ingest: reference/ingest.md
       - Model: reference/model.md
       - Search: reference/search.md
-  - Notebooks:
-      - API Usage: notebooks/api_usage.ipynb
-      - Benchmark Inference Servers: notebooks/benchmark_inference_servers.ipynb
-      - Embedder: notebooks/embedder.ipynb
-  - Documentation Guide: DOCS.md
+      - Documentation Guide: reference/docs.md
+  - Examples:
+      - Embedder: examples/embedder.ipynb
 
 markdown_extensions:
   - admonition
   - codehilite:
       use_pygments: true
   - toc:
-      permalink: true
+      permalink: "🔗"
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
