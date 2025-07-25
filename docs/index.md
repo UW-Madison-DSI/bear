@@ -1,43 +1,28 @@
 # Backend for Embedded Academic Resources (BEAR)
 
-**Vector Search Made Simple — Like WordPress for Search.**
+**Open-source framework for semantic expert search, digital twin interactions, and easy academic data integration.**
 
-BEAR is a powerful backend system designed to make academic research more accessible through vector search capabilities. It provides a comprehensive solution for crawling, processing, and searching academic resources using state-of-the-art embedding techniques.
+## Why BEAR?
+
+Finding experts is slow and fragmented. BEAR solves this with:
+
+- **Semantic search** using plain language to find domain experts.
+- **Digital twins** – AI-powered avatars built from an expert’s papers, talks, and datasets, enabling **chat with their work** for early engagement.
+- **One-click deployment** for universities.
 
 ## Features
 
-- **Easy Setup**: Simple configuration and deployment process
-- **Vector Search**: Advanced semantic search capabilities
-- **Academic Data**: Integration with OpenAlex for comprehensive academic data
-- **RESTful API**: Clean and intuitive API for integration
-- **Scalable**: Built on modern vector database technology (Milvus)
-- **Institutional Focus**: Support for institution-specific deployments
+- **Quick Setup**: Launch a proof-of-concept in minutes.
+- **Semantic Search**: Plain language search with advanced embeddings, at resource or author level.
+- **Digital Twins**: Chat with papers or expert-like avatars.
+- **AI Profiles**: Auto-generated author profiles.
+- **Custom Data Integration**: Integrate with your institution's internal data, or other data source.
+
+## Value
+
+- Makes academic data accessible and conversational.
+- Accelerates collaboration and discovery.
 
 ## Quick Start
 
-For a quick start guide, see [Getting Started](getting-started.md).
-
-## Architecture
-
-BEAR consists of several key components:
-
-- **Crawler**: Data collection from OpenAlex
-- **Ingest**: Data processing and vectorization
-- **Search**: Vector search and retrieval
-- **API**: RESTful interface for queries
-- **Database**: Vector and metadata storage
-
-## Use Cases
-
-- Academic research discovery
-- Institutional research analytics
-- Semantic search for publications
-- Author and collaboration analysis
-- Research trend identification
-
-## Documentation Sections
-
-- [Getting Started](getting-started.md) - Setup and installation
-- [Usage](usage.md) - How to use BEAR effectively
-- [API Reference](reference/api.md) - Complete API documentation
-- [Notebooks](notebooks/api_usage.ipynb) - Interactive examples and tutorials
+See [Getting Started](getting_started.md).

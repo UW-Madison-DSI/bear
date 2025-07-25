@@ -50,7 +50,7 @@ docs/
 │   ├── ingest.md
 │   ├── model.md
 │   └── search.md
-└── notebooks/               # Jupyter notebooks (symlinked)
+└── notebooks/
     ├── api_usage.ipynb
     ├── benchmark_inference_servers.ipynb
     └── embedder.ipynb
