@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Any, Protocol, Self
 
 import httpx
@@ -19,8 +20,8 @@ class Resource(Protocol):
 
     @property
     def _name(self) -> str: ...  # Name of the resource for Milvus collection
-    @property
-    def embedding_config(self) -> EmbeddingConfig: ...  # Embedding configuration for the resource
+    @classmethod
+    def embedding_config(cls) -> EmbeddingConfig: ...  # Embedding configuration for the resource
     @staticmethod
     def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
@@ -94,13 +95,19 @@ class Work(BaseModel):
         ),
     ]
 
+    # Misc
+    ignore: Annotated[bool, Field(default=False), WithJsonSchema({"datatype": DataType.BOOL})]
+    last_modified: Annotated[
+        str, Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 32})
+    ]
+
     @property
     def _name(self) -> str:
         """Return the name of the model for Milvus collection."""
         return self.__class__.__name__.lower()
 
-    @property
-    def embedding_config(self) -> EmbeddingConfig:
+    @classmethod
+    def embedding_config(cls) -> EmbeddingConfig:
         """Return the embedding configuration for the model."""
         return config.default_embedding_config
 
