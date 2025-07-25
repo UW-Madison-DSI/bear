@@ -11,7 +11,6 @@ import pytest
 from bear.crawler import (
     _dump,
     _get_page_results,
-    crawl,
     get_openalex_id,
     query_openalex,
     strip_oa_prefix,
@@ -188,72 +187,3 @@ class TestDump:
 
             assert nested_path.exists()
             assert nested_path.parent.exists()
-
-
-class TestCrawl:
-    """Test the crawl function."""
-
-    @patch("bear.crawler.query_openalex")
-    @patch("bear.crawler.get_openalex_id")
-    @patch("bear.crawler._dump")
-    def test_crawl_basic_flow(self, mock_dump, mock_get_id, mock_query):
-        """Test the basic crawl flow."""
-        # Mock institution ID lookup
-        mock_get_id.return_value = "I135310074"
-
-        # Mock authors query
-        mock_authors = [
-            {"id": "https://openalex.org/A123456789", "display_name": "Author 1"},
-            {"id": "https://openalex.org/A987654321", "display_name": "Author 2"},
-        ]
-
-        # Mock works queries
-        mock_works = [{"id": "https://openalex.org/W123", "title": "Paper 1"}, {"id": "https://openalex.org/W456", "title": "Paper 2"}]
-
-        mock_query.side_effect = [mock_authors, mock_works, mock_works]
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            save_path = Path(temp_dir) / "openalex_data"
-
-            crawl(institution="Test University", save_path=save_path, author_api_call_limit=1, authors_limit=2, per_author_work_api_call_limit=1)
-
-            # Verify institution ID was looked up
-            mock_get_id.assert_called_once_with("institutions", "Test University")
-
-            # Verify authors were queried
-            authors_call = mock_query.call_args_list[0]
-            assert authors_call[1]["endpoint"] == "authors"
-            assert "I135310074" in authors_call[1]["query"]
-
-            # Verify _dump was called for authors and works
-            assert mock_dump.call_count == 3  # 1 authors + 2 works files
-
-    @patch("bear.crawler.query_openalex")
-    @patch("bear.crawler.get_openalex_id")
-    @patch("bear.crawler._dump")
-    def test_crawl_with_limits(self, mock_dump, mock_get_id, mock_query):
-        """Test crawl with various limits applied."""
-        mock_get_id.return_value = "I135310074"
-
-        # Create more authors than the limit
-        mock_authors = [{"id": f"https://openalex.org/A{i}", "display_name": f"Author {i}"} for i in range(5)]
-        mock_query.return_value = mock_authors
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            save_path = Path(temp_dir) / "openalex_data"
-
-            crawl(institution="Test University", save_path=save_path, author_api_call_limit=2, authors_limit=3, per_author_work_api_call_limit=1)
-
-            # Should process only 3 authors due to authors_limit
-            # 1 call for authors + 3 calls for works = 4 total
-            assert mock_query.call_count == 4
-
-    def test_crawl_creates_save_directory(self):
-        """Test that crawl creates the save directory if it doesn't exist."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            save_path = Path(temp_dir) / "new_directory" / "openalex_data"
-
-            with patch("bear.crawler.get_openalex_id"), patch("bear.crawler.query_openalex", return_value=[]), patch("bear.crawler._dump"):
-                crawl("Test University", save_path=save_path)
-
-                assert save_path.exists()

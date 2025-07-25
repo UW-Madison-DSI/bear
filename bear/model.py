@@ -1,10 +1,11 @@
+from datetime import datetime
 from typing import Annotated, Any, Protocol, Self
 
 import httpx
 from pydantic import BaseModel, Field, WithJsonSchema
 from pymilvus import DataType
 
-from bear.config import config
+from bear.config import EmbeddingConfig, config
 
 
 def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]]:
@@ -19,6 +20,8 @@ class Resource(Protocol):
 
     @property
     def _name(self) -> str: ...  # Name of the resource for Milvus collection
+    @classmethod
+    def embedding_config(cls) -> EmbeddingConfig: ...  # Embedding configuration for the resource
     @staticmethod
     def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
@@ -83,13 +86,30 @@ class Work(BaseModel):
     embedding: Annotated[
         list[float | None],
         Field(default_factory=list),
-        WithJsonSchema({"datatype": DataType.FLOAT_VECTOR, "dim": config.embedding_config.dimensions, "index_configs": config.embedding_config.index_config}),
+        WithJsonSchema(
+            {
+                "datatype": DataType.FLOAT_VECTOR,
+                "dim": config.default_embedding_config.dimensions,
+                "index_configs": config.default_embedding_config.index_config,
+            }
+        ),
+    ]
+
+    # Misc
+    ignore: Annotated[bool, Field(default=False), WithJsonSchema({"datatype": DataType.BOOL})]
+    last_modified: Annotated[
+        str, Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d")), WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 32})
     ]
 
     @property
     def _name(self) -> str:
         """Return the name of the model for Milvus collection."""
         return self.__class__.__name__.lower()
+
+    @classmethod
+    def embedding_config(cls) -> EmbeddingConfig:
+        """Return the embedding configuration for the model."""
+        return config.default_embedding_config
 
     @property
     def abstract(self) -> str:

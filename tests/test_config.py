@@ -306,7 +306,7 @@ class TestConfig:
         os.environ["DEFAULT_HNSW_EF_CONSTRUCTION"] = "1024"
 
         config = Config()
-        embedding_config = config.embedding_config
+        embedding_config = config.default_embedding_config
 
         assert isinstance(embedding_config, EmbeddingConfig)
         assert embedding_config.provider == "openai"
@@ -331,7 +331,7 @@ class TestConfig:
         os.environ["DEFAULT_HNSW_EF_CONSTRUCTION"] = "256"
 
         config = Config()
-        embedding_config = config.embedding_config
+        embedding_config = config.default_embedding_config
         index_config = embedding_config.index_config
 
         expected_config = {
@@ -408,7 +408,7 @@ class TestConfigIntegration:
         config = Config()
 
         # Get embedding config
-        embedding_config = config.embedding_config
+        embedding_config = config.default_embedding_config
 
         # Verify it's properly configured
         assert embedding_config.provider == "openai"

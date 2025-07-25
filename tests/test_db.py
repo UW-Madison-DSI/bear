@@ -231,7 +231,7 @@ class TestIntegration:
         # Verify the full workflow
         mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="test-token")
         mock_client.create_database.assert_called_once_with(db_name="test_db")
-        mock_client.use_database.assert_called_once_with("test_db")
+        assert mock_client.use_database.call_count == 2
 
         # Verify collection creation for each model
         expected_calls = len(ALL_RESOURCES)

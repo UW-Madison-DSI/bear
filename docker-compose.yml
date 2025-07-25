@@ -65,10 +65,19 @@ services:
       - milvus
     restart: unless-stopped
 
-  # bear-api:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
+  api:
+    container_name: api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./tmp:/app/tmp
+    env_file:
+      - .env
+    environment:
+      - MILVUS_HOST=milvus
+    ports:
+      - "8000:8000"
 
 
 networks:

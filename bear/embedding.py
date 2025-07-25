@@ -188,7 +188,7 @@ class TEIEmbedder:
         return [v.embedding for v in response.data]
 
 
-def get_embedder(embedding_config: EmbeddingConfig = config.embedding_config) -> Embedder:
+def get_embedder(embedding_config: EmbeddingConfig = config.default_embedding_config) -> Embedder:
     """Get the embedder instance based on configuration."""
     if embedding_config.provider == "openai":
         return OpenAIEmbedder.from_config(embedding_config)
@@ -197,8 +197,17 @@ def get_embedder(embedding_config: EmbeddingConfig = config.embedding_config) ->
     raise ValueError(f"Unknown embedding provider: {embedding_config.provider}")
 
 
-def embed(
-    resources: list[ResourceType], batch_size: int = 256, embedding_config: EmbeddingConfig = config.embedding_config, embedding_field: str = "embedding"
+def embed_query(query: str, embedding_config: EmbeddingConfig = config.default_embedding_config) -> list[float]:
+    """Embed a query string into a vector representation."""
+    embedder = get_embedder(embedding_config)
+    return embedder.embed(text=query, text_type=TextType.QUERY)[0]
+
+
+def embed_resources(
+    resources: list[ResourceType],
+    batch_size: int = 256,
+    embedding_config: EmbeddingConfig = config.default_embedding_config,
+    embedding_field: str = "embedding",
 ) -> list[ResourceType]:
     """Embed a list of resources in batch."""
 

@@ -1,10 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from bear import search
+from bear.model import Work
+from bear.search import SearchEngine
 
-app = FastAPI()
+# Global dictionary to store shared resources
+app_state = {}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize the search engine
+    app_state["search_engine"] = SearchEngine()
+    yield
+    # Shutdown: Clean up resources if needed
+    app_state.clear()
+
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -18,25 +34,102 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"Instruction": "Try /search?query=your_query_here&top_k=3"}
+    return {"Instruction": "Try /search_resource?query=your_query_here&top_k=3 or /search_author?query=your_query_here&top_k=3"}
 
 
-class SearchResults(BaseModel):
-    name: str
-    open_alex_url: str
-    orcid: str | None
-    score: float
+class ResourceSearchResult(BaseModel):
+    id: str
     doi: str | None = None
-    journal: str | None = None
+    title: str | None = None
+    display_name: str | None = None
     publication_year: int | None = None
+    publication_date: str | None = None
+    type: str | None = None
+    cited_by_count: int | None = None
+    source_display_name: str | None = None
+    topics: list[str] | None = None
     abstract: str | None = None
+    distance: float
+    author_ids: list[str] | None = None
 
 
-@app.get("/search", response_model=list[SearchResults])
-def search_route(
+class AuthorSearchResult(BaseModel):
+    author_id: str
+    score: float
+
+
+@app.get("/search_resource", response_model=list[ResourceSearchResult])
+def search_resource_route(
     query: str = Query(..., title="The query string to search for."),
     top_k: int = Query(3, title="The number of results to return."),
+    resource_name: str = Query("work", title="The resource type to search (default: work)."),
+    min_distance: float | None = Query(None, title="Minimum distance threshold for results."),
+    since_year: int | None = Query(None, title="Filter results from this year onwards."),
 ):
-    if results := search(query, top_k):
-        return results
-    raise HTTPException(status_code=404, detail="No results found.")
+    try:
+        results = app_state["search_engine"].search_resource(
+            resource_name=resource_name, query=query, top_k=top_k, min_distance=min_distance, since_year=since_year
+        )
+
+        if not results:
+            raise HTTPException(status_code=404, detail="No results found.")
+
+        # Convert results to response format
+        formatted_results = []
+        for result in results:
+            entity = result.get("entity", {})
+            # Add abstract from inverted index if available
+            abstract = None
+            if "abstract_inverted_index" in entity and entity["abstract_inverted_index"]:
+                abstract = Work._recover_abstract(entity["abstract_inverted_index"])
+
+            formatted_results.append(
+                ResourceSearchResult(
+                    id=entity.get("id", ""),
+                    doi=entity.get("doi"),
+                    title=entity.get("title"),
+                    display_name=entity.get("display_name"),
+                    publication_year=entity.get("publication_year"),
+                    publication_date=entity.get("publication_date"),
+                    type=entity.get("type"),
+                    cited_by_count=entity.get("cited_by_count"),
+                    source_display_name=entity.get("source_display_name"),
+                    topics=entity.get("topics", []),
+                    abstract=abstract,
+                    distance=result.get("distance", 0.0),
+                    author_ids=entity.get("author_ids", []),
+                )
+            )
+
+        return formatted_results
+
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@app.get("/search_author", response_model=list[AuthorSearchResult])
+def search_author_route(
+    query: str = Query(..., title="The query string to search for authors."),
+    top_k: int = Query(3, title="The number of results to return."),
+    institutions: list[str] | None = Query(None, title="Filter authors by institutions."),
+    min_distance: float | None = Query(None, title="Minimum distance threshold for results."),
+    since_year: int | None = Query(None, title="Filter results from this year onwards."),
+):
+    try:
+        results = app_state["search_engine"].search_author(
+            query=query, top_k=top_k, institutions=institutions, min_distance=min_distance, since_year=since_year
+        )
+
+        if not results:
+            raise HTTPException(status_code=404, detail="No results found.")
+
+        return [AuthorSearchResult(author_id=result["author_id"], score=result["score"]) for result in results]
+
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Author search failed: {str(e)}")
