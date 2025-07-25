@@ -6,6 +6,9 @@ repo_name: uw-madison-dsi/bear
 
 theme:
   name: material
+  icon:
+    logo: material/account-search
+  favicon: images/favicon.svg
   features:
     - navigation.instant
     - navigation.tabs
@@ -16,14 +19,14 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: brown
+      primary: orange
       accent: amber
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: brown
+      primary: orange
       accent: amber
       toggle:
         icon: material/brightness-4
@@ -64,7 +67,7 @@ nav:
       - Model: reference/model.md
       - Search: reference/search.md
       - Documentation Guide: reference/docs.md
-  - Examples:
+  - Other Examples:
       - Embedder: examples/embedder.ipynb
 
 markdown_extensions:
@@ -77,3 +80,4 @@ markdown_extensions:
       anchor_linenums: true
       use_pygments: true
   - pymdownx.superfences
+
