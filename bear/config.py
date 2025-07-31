@@ -76,6 +76,10 @@ class Config(BaseSettings):
     # Logging
     LOG_LEVEL: str = "DEBUG"
 
+    # Other integrations
+    TQDM_SLACK_TOKEN: SecretStr | None = None
+    TQDM_SLACK_CHANNEL: str = "general"
+
     @property
     def DEFAULT_EMBEDDING_API_KEY(self) -> SecretStr | None:
         """Return the default embedding API key based on the provider."""
