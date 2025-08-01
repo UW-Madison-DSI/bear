@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
-from bear import ALL_RESOURCES, Resource, ResourceType
+from bear import ALL_RESOURCES, ResourceProtocol, ResourceType
 from bear.config import config, logger
 
 load_dotenv()
@@ -16,7 +16,7 @@ def get_milvus_client(db_name: str = config.MILVUS_DB_NAME) -> MilvusClient:
     return client
 
 
-def create_milvus_collection(client: MilvusClient, model: type[Resource], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:
+def create_milvus_collection(client: MilvusClient, model: type[ResourceProtocol], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:
     """Create a Milvus collection for the given model."""
 
     if model not in ALL_RESOURCES:

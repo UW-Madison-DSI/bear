@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from typing import Annotated, Any, Protocol, Self
 
 import httpx
@@ -15,7 +16,7 @@ def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
-class Resource(Protocol):
+class ResourceProtocol(Protocol):
     """Protocol for resources that can be stored in Milvus."""
 
     @property
@@ -188,3 +189,5 @@ class Work(BaseModel):
 
 
 ALL_RESOURCES = [Work]
+ALL_RESOURCES_NAMES = [resource.__name__.lower() for resource in ALL_RESOURCES]
+Resource = StrEnum("Resource", ALL_RESOURCES_NAMES)
