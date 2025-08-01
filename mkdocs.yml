@@ -53,6 +53,10 @@ plugins:
       minify_css: true
       minify_js: true
 
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
 nav:
   - Home: index.md
   - Getting Started: getting_started.md
@@ -63,12 +67,14 @@ nav:
       - Crawler: reference/crawler.md
       - Database: reference/db.md
       - Embedding: reference/embedding.md
+      - Reranker: reference/reranker.md
       - Ingest: reference/ingest.md
       - Model: reference/model.md
       - Search: reference/search.md
       - Documentation Guide: reference/docs.md
   - Other Examples:
       - Embedder: examples/embedder.ipynb
+      - Reranker: examples/reranker.ipynb
 
 markdown_extensions:
   - admonition
@@ -80,4 +86,6 @@ markdown_extensions:
       anchor_linenums: true
       use_pygments: true
   - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
 
