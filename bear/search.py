@@ -1,33 +1,18 @@
-from collections import defaultdict
 from functools import cache
-from typing import Any, Callable
+from typing import Any
 
 import pandas as pd
+from pymilvus import MilvusClient
 
 from bear import model
 from bear.config import logger
 from bear.db import get_milvus_client
 from bear.embedding import embed_query
+from bear.reranker import Reranker, get_reranker
 
 INSTITUTION_AUTHOR_DIRECTORY = {
     "uw-madison": "tmp/openalex_data/authors",
 }
-
-
-def rerank_by_author(results: list[dict[str, Any]], aggregate_function: Callable = sum) -> list[dict[str, float]]:
-    """Rerank the search results by author ID."""
-    result = defaultdict(list)
-    for r in results:
-        for author_id in r["author_ids"]:
-            result[author_id].append(r["distance"])
-
-    # Calculate author scores with aggregate function
-    result = dict(result)
-    author_scores = {author_id: aggregate_function(distances) for author_id, distances in result.items()}
-
-    # Sort authors by score
-    sorted_authors = sorted(author_scores.items(), key=lambda x: x[1], reverse=True)
-    return [{"author_id": author_id, "score": score} for author_id, score in sorted_authors]
 
 
 @cache
@@ -57,8 +42,9 @@ def filter_institution_authors(institutions: list[str], results: list[dict[str, 
 class SearchEngine:
     """Search engine for vector-based similarity search across resources."""
 
-    def __init__(self, client=None):
+    def __init__(self, client: MilvusClient | None = None, reranker: Reranker | None = None) -> None:
         self.client = client or get_milvus_client()
+        self.reranker = reranker or get_reranker()
 
     def search_resource(
         self,
@@ -118,14 +104,15 @@ class SearchEngine:
 
         # Apply distance filter if specified
         if min_distance is not None:
-            results = [result for result in results if result["distance"] > min_distance]
+            results = [result for result in results if result["distance"] >= min_distance]
 
         return sorted(results, key=lambda x: x["distance"], reverse=True)
 
-    def search_author(self, query: str, top_k: int = 3, aggregate_function: Callable = sum, institutions: list[str] | None = None, **kwargs) -> list[dict]:
+    def search_author(self, query: str, top_k: int = 1000, institutions: list[str] | None = None, **kwargs) -> list[dict]:
         """Search for authors based on a query string."""
-        resources = self.search_resource("work", query, top_k, **kwargs)
-        results = rerank_by_author(resources, aggregate_function=aggregate_function)  # this must be done before filtering
+
+        resources_sets = {name: self.search_resource(name, query, top_k, **kwargs) for name in model.ALL_RESOURCES_NAMES}
+        results = self.reranker.rerank(resources_sets)
         if institutions:
             results = filter_institution_authors(institutions=institutions, results=results)
         return results
