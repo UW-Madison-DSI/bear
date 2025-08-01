@@ -16,6 +16,7 @@ theme:
     - search.highlight
     - search.suggest
     - content.code.copy
+    - content.math
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
