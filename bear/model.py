@@ -16,6 +16,35 @@ def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
+class Person(BaseModel):
+    """Represents a person entity."""
+
+    id: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 64, "is_primary": True})]
+    display_name: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 128})]
+    last_known_institutions_ids: Annotated[
+        list[str] | None,
+        Field(default_factory=list),
+        WithJsonSchema({"datatype": DataType.ARRAY, "element_type": DataType.VARCHAR, "max_capacity": 64, "nullable": True, "max_length": 64}),
+    ]
+
+    @property
+    def _name(self) -> str:
+        """Return the name of the model for Milvus collection."""
+        return self.__class__.__name__.lower()
+
+    @staticmethod
+    def parse(raw_data: dict) -> dict:
+        return {
+            "id": raw_data.get("id"),
+            "display_name": raw_data.get("display_name"),
+            "last_known_institutions_ids": [str(inst["id"]) for inst in raw_data.get("last_known_institutions", []) if "id" in inst],
+        }
+
+    @classmethod
+    def from_raw(cls, raw_data: dict) -> Self:
+        return cls(**cls.parse(raw_data))
+
+
 class ResourceProtocol(Protocol):
     """Protocol for resources that can be stored in Milvus."""
 
@@ -27,7 +56,7 @@ class ResourceProtocol(Protocol):
     def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
     def from_raw(cls, raw_data: dict) -> Self: ...  # Create an instance from raw data
-    def to_milvus(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
+    def model_dump(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
     def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
 
 
@@ -79,13 +108,13 @@ class Work(BaseModel):
 
     # Denormalized authors (Milvus does not support nested objects)
     author_ids: Annotated[
-        list[str | None],
+        list[str] | None,
         Field(default_factory=list),
         WithJsonSchema({"datatype": DataType.ARRAY, "element_type": DataType.VARCHAR, "max_capacity": 2048, "nullable": True, "max_length": 64}),
     ]
 
     embedding: Annotated[
-        list[float | None],
+        list[float] | None,
         Field(default_factory=list),
         WithJsonSchema(
             {
@@ -183,11 +212,13 @@ class Work(BaseModel):
             text += f"\nabstract: {self.abstract}"
         return text
 
-    def to_milvus(self) -> dict:
-        """Convert to dictionary for Milvus insertion."""
-        return self.model_dump()
 
-
+# Resources are the base-level documents we embed and search.
 ALL_RESOURCES = [Work]
 ALL_RESOURCES_NAMES = [resource.__name__.lower() for resource in ALL_RESOURCES]
 Resource = StrEnum("Resource", ALL_RESOURCES_NAMES)
+
+# Clusters are the higher-level entities that group related resources.
+ALL_CLUSTERS = [Person]
+ALL_CLUSTERS_NAMES = [cluster.__name__.lower() for cluster in ALL_CLUSTERS]
+Cluster = StrEnum("Cluster", ALL_CLUSTERS_NAMES)
