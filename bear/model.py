@@ -16,6 +16,28 @@ def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]
     return {k: list(map(int, v)) for k, v in inverted_index.items() if v is not None}
 
 
+DUMMY_EMBEDDING_CONFIG = {
+    "datatype": DataType.FLOAT_VECTOR,
+    "dim": 2,
+    "index_configs": {"index_type": "HNSW", "metric_type": "IP", "params": {"M": 2, "efConstruction": 2}},
+}
+
+
+class CollectionProtocol(Protocol):
+    """Protocol for resources or clusters that can be stored in Milvus."""
+
+    @property
+    def _name(self) -> str: ...  # Name of the resource for Milvus collection
+    @classmethod
+    def embedding_config(cls) -> EmbeddingConfig | None: ...  # Embedding configuration for the resource
+    @staticmethod
+    def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
+    @classmethod
+    def from_raw(cls, raw_data: dict) -> Self: ...  # Create an instance from raw data
+    def model_dump(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
+    def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
+
+
 class Person(BaseModel):
     """Represents a person entity."""
 
@@ -26,6 +48,8 @@ class Person(BaseModel):
         Field(default_factory=list),
         WithJsonSchema({"datatype": DataType.ARRAY, "element_type": DataType.VARCHAR, "max_capacity": 64, "nullable": True, "max_length": 64}),
     ]
+
+    embedding: Annotated[list[float] | None, Field(default_factory=list), WithJsonSchema(DUMMY_EMBEDDING_CONFIG)]
 
     @property
     def _name(self) -> str:
@@ -44,20 +68,9 @@ class Person(BaseModel):
     def from_raw(cls, raw_data: dict) -> Self:
         return cls(**cls.parse(raw_data))
 
-
-class ResourceProtocol(Protocol):
-    """Protocol for resources that can be stored in Milvus."""
-
-    @property
-    def _name(self) -> str: ...  # Name of the resource for Milvus collection
     @classmethod
-    def embedding_config(cls) -> EmbeddingConfig: ...  # Embedding configuration for the resource
-    @staticmethod
-    def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
-    @classmethod
-    def from_raw(cls, raw_data: dict) -> Self: ...  # Create an instance from raw data
-    def model_dump(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
-    def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
+    def embedding_config(cls) -> EmbeddingConfig | None:
+        return None
 
 
 class Work(BaseModel):

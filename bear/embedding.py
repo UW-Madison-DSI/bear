@@ -5,7 +5,7 @@ from typing import Any, Protocol
 import httpx
 from openai import OpenAI
 
-from bear import ResourceType
+from bear import CollectionType
 from bear.config import EmbeddingConfig, config, logger
 
 
@@ -204,11 +204,11 @@ def embed_query(query: str, embedding_config: EmbeddingConfig = config.default_e
 
 
 def embed_resources(
-    resources: list[ResourceType],
+    resources: list[CollectionType],
     batch_size: int = 256,
     embedding_config: EmbeddingConfig = config.default_embedding_config,
     embedding_field: str = "embedding",
-) -> list[ResourceType]:
+) -> list[CollectionType]:
     """Embed a list of resources in batch."""
 
     embedder = get_embedder(embedding_config)
