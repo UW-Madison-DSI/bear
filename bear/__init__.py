@@ -1,7 +1,6 @@
 from typing import TypeVar
 
-from .model import ALL_RESOURCES, ResourceProtocol
+from .model import ALL_CLUSTERS, ALL_RESOURCES, CollectionProtocol
 
-ResourceType = TypeVar("ResourceType", bound=ResourceProtocol)
-
-__all__ = ["ResourceType", "ResourceProtocol", "ALL_RESOURCES"]
+CollectionType = TypeVar("CollectionType", bound=CollectionProtocol)
+__all__ = ["CollectionType", "CollectionProtocol", "ALL_RESOURCES", "ALL_CLUSTERS"]

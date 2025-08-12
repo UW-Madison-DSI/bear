@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
-from bear import ALL_RESOURCES, ResourceProtocol, ResourceType
+from bear import ALL_RESOURCES, CollectionProtocol, CollectionType
 from bear.config import config, logger
+from bear.model import ALL_CLUSTERS
 
 load_dotenv()
 
@@ -16,10 +17,10 @@ def get_milvus_client(db_name: str = config.MILVUS_DB_NAME) -> MilvusClient:
     return client
 
 
-def create_milvus_collection(client: MilvusClient, model: type[ResourceProtocol], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:
+def create_resource_collection(client: MilvusClient, model: type[CollectionProtocol], auto_id: bool = False, enable_dynamic_field: bool = True) -> None:
     """Create a Milvus collection for the given model."""
 
-    if model not in ALL_RESOURCES:
+    if model not in ALL_RESOURCES and model not in ALL_CLUSTERS:
         raise ValueError(f"Model {model} is not registered in bear.model.ALL_MODELS.")
 
     collection_name = model.__name__.lower()  # Not instantiated, just use the class name
@@ -64,10 +65,10 @@ def init(db_name: str = config.MILVUS_DB_NAME, wipe: bool = False) -> None:
     client.use_database(db_name)
 
     for model in ALL_RESOURCES:
-        create_milvus_collection(client=client, model=model)
+        create_resource_collection(client=client, model=model)
 
 
-def push(resources: list[ResourceType], db_name: str = config.MILVUS_DB_NAME) -> None:
+def push(resources: list[CollectionType], db_name: str = config.MILVUS_DB_NAME) -> None:
     """Upsert resources into Milvus. This method is slower but ensures no duplicate IDs."""
     client = get_milvus_client()
     client.use_database(db_name)
@@ -76,7 +77,7 @@ def push(resources: list[ResourceType], db_name: str = config.MILVUS_DB_NAME) ->
     if not client.has_collection(collection_name):
         raise ValueError(f"Collection '{collection_name}' does not exist. Please create it first.")
 
-    data = [resource.to_milvus() for resource in resources]
+    data = [resource.model_dump() for resource in resources]
     client.insert(collection_name=collection_name, data=data)
     logger.info(f"Inserted {len(resources)} resources into collection '{collection_name}'.")
 

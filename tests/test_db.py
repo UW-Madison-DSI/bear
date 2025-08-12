@@ -6,7 +6,7 @@ import pytest
 from pydantic import BaseModel
 from pymilvus import MilvusClient
 
-from bear.db import create_milvus_collection, get_milvus_client, init
+from bear.db import create_resource_collection, get_milvus_client, init
 from bear.model import ALL_RESOURCES, Work
 
 
@@ -78,7 +78,7 @@ class TestCreateMilvusCollection:
         """Test successful creation of Milvus collection."""
         self.mock_client.has_collection.return_value = False
 
-        create_milvus_collection(self.mock_client, Work)
+        create_resource_collection(self.mock_client, Work)
 
         # Verify collection creation flow
         self.mock_client.has_collection.assert_called_once_with("work")
@@ -99,7 +99,7 @@ class TestCreateMilvusCollection:
         """Test creating collection when it already exists."""
         self.mock_client.has_collection.return_value = True
 
-        create_milvus_collection(self.mock_client, Work)
+        create_resource_collection(self.mock_client, Work)
 
         # Verify only existence check was made
         self.mock_client.has_collection.assert_called_once_with("work")
@@ -114,7 +114,7 @@ class TestCreateMilvusCollection:
             name: str
 
         with pytest.raises(ValueError, match="Model .* is not registered in bear.model.ALL_MODELS"):
-            create_milvus_collection(self.mock_client, UnregisteredModel)
+            create_resource_collection(self.mock_client, UnregisteredModel)
 
 
 class TestInit:

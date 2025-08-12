@@ -6,10 +6,10 @@ import pandas as pd
 from bear.config import logger
 from bear.db import push
 from bear.embedding import embed_resources
-from bear.model import Work
+from bear.model import Person, Work
 
 
-def ingest(path: Path, remove_ingested: bool = False) -> None:
+def ingest_work(path: Path, remove_ingested: bool = False) -> None:
     """Ingest staging file into Milvus."""
 
     logger.info(f"Loading data from {path}")
@@ -27,9 +27,27 @@ def ingest(path: Path, remove_ingested: bool = False) -> None:
         path.unlink()
 
 
+def ingest_person(path: Path) -> None:
+    """Ingest staging person data from a Parquet file to Milvus."""
+
+    logger.info(f"Loading data from {path}")
+    df = pd.read_parquet(path)
+
+    logger.info(f"Data loaded with {len(df)} rows.")
+    persons = []
+    for _, row in df.iterrows():
+        person = Person.from_raw(row.to_dict())
+        person.embedding = [0, 0]  # Dummy embedding workaround, Milvus must have vector field
+        persons.append(person)
+
+    push(persons)
+    logger.info(f"Ingested {len(persons)} persons from {path} into Milvus.")
+
+
 def main() -> None:
     """Main function to run the ingestion."""
     parser = argparse.ArgumentParser(description="Ingest OpenAlex data into Milvus.")
+    parser.add_argument("--type", type=str, choices=["work", "person"], default="work", help="Type of data to ingest.")
     parser.add_argument("--path", type=str, default="tmp/openalex_data/works", help="Path to the directory containing parquet files to ingest.")
     parser.add_argument("--test", action="store_true", help="Run in test mode, ingest 10 files.")
 
@@ -39,7 +57,12 @@ def main() -> None:
     files = files[:10] if args.test else files
 
     for file in files:
-        ingest(file, remove_ingested=True)
+        if args.type == "work":
+            ingest_work(file, remove_ingested=True)
+        elif args.type == "person":
+            ingest_person(file)
+        else:
+            logger.warning(f"Unknown data type: {args.type}")
     logger.info(f"Ingestion complete for directory: {staging_dir}")
 
 
