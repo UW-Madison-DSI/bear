@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from bear.config import logger
+from bear.config import config, logger
 from bear.db import push
 from bear.embedding import embed_resources
 from bear.model import Person, Work
@@ -36,9 +36,12 @@ def ingest_person(path: Path) -> None:
     logger.info(f"Data loaded with {len(df)} rows.")
     persons = []
     for _, row in df.iterrows():
-        person = Person.from_raw(row.to_dict())
-        person.embedding = [0, 0]  # Dummy embedding workaround, Milvus must have vector field
-        persons.append(person)
+        try:
+            person = Person.from_raw(row.to_dict(), institution_id=config.OPENALEX_INSTITUTION_ID)
+            person.embedding = [0, 0]  # Dummy embedding workaround, Milvus must have vector field
+            persons.append(person)
+        except Exception as e:
+            logger.error(f"Error processing row {_}: {e}")
 
     push(persons)
     logger.info(f"Ingested {len(persons)} persons from {path} into Milvus.")

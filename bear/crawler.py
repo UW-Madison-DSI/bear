@@ -17,7 +17,7 @@ from bear.config import config, logger
 
 def strip_oa_prefix(id: str) -> str:
     """Remove the OpenAlex ID prefix."""
-    return id.lstrip("https://openalex.org/")
+    return id.lstrip("https://openalex.org/").lower()
 
 
 @retry(
@@ -167,6 +167,8 @@ def crawl(
     # Get existing authors if skip_existing is True
     if skip_existing_works and (save_path / "authors").exists():
         existing_authors = [p.name for p in Path("tmp/openalex_data/works/").glob("*/")]
+    else:
+        existing_authors = []
 
     if not skip_pulling_authors:
         # Get all authors affiliated with the institution
@@ -198,7 +200,7 @@ def crawl(
             query_works = f"authorships.author.id:{author_id}"
             query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
         except Exception as e:
-            logger.error(f"Error processing author {author_id}: {str(e)}")
+            logger.error(f"Error processing author {author['id']}: {str(e)}")
             continue
 
 

@@ -64,7 +64,7 @@ def init(db_name: str = config.MILVUS_DB_NAME, wipe: bool = False) -> None:
 
     client.use_database(db_name)
 
-    for model in ALL_RESOURCES:
+    for model in ALL_RESOURCES + ALL_CLUSTERS:
         create_resource_collection(client=client, model=model)
 
 
@@ -78,7 +78,7 @@ def push(resources: list[CollectionType], db_name: str = config.MILVUS_DB_NAME) 
         raise ValueError(f"Collection '{collection_name}' does not exist. Please create it first.")
 
     data = [resource.model_dump() for resource in resources]
-    client.insert(collection_name=collection_name, data=data)
+    client.upsert(collection_name=collection_name, data=data)
     logger.info(f"Inserted {len(resources)} resources into collection '{collection_name}'.")
 
 

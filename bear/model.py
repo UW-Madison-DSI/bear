@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, WithJsonSchema
 from pymilvus import DataType
 
 from bear.config import EmbeddingConfig, config
+from bear.crawler import strip_oa_prefix
 
 
 def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]]:
@@ -31,9 +32,9 @@ class CollectionProtocol(Protocol):
     @classmethod
     def embedding_config(cls) -> EmbeddingConfig | None: ...  # Embedding configuration for the resource
     @staticmethod
-    def parse(raw_data: dict) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
+    def parse(raw_data: dict, **kwargs) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
-    def from_raw(cls, raw_data: dict) -> Self: ...  # Create an instance from raw data
+    def from_raw(cls, raw_data: dict, **kwargs) -> Self: ...  # Create an instance from raw data
     def model_dump(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
     def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
 
@@ -43,13 +44,8 @@ class Person(BaseModel):
 
     id: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 64, "is_primary": True})]
     display_name: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 128})]
-    last_known_institutions_ids: Annotated[
-        list[str] | None,
-        Field(default_factory=list),
-        WithJsonSchema({"datatype": DataType.ARRAY, "element_type": DataType.VARCHAR, "max_capacity": 64, "nullable": True, "max_length": 64}),
-    ]
-
-    embedding: Annotated[list[float] | None, Field(default_factory=list), WithJsonSchema(DUMMY_EMBEDDING_CONFIG)]
+    institution_id: Annotated[str, WithJsonSchema({"datatype": DataType.VARCHAR, "max_length": 64})]
+    embedding: Annotated[list[float], Field(default_factory=lambda: [0, 0]), WithJsonSchema(DUMMY_EMBEDDING_CONFIG)]
 
     @property
     def _name(self) -> str:
@@ -57,16 +53,22 @@ class Person(BaseModel):
         return self.__class__.__name__.lower()
 
     @staticmethod
-    def parse(raw_data: dict) -> dict:
+    def parse(raw_data: dict, institution_id: str) -> dict:
+        """User institution_id and raw_data to create a Person instance."""
+
+        # Verify institution_id is in the raw data
+        institutions = raw_data.get("last_known_institutions", [])
+        ids = [strip_oa_prefix(inst["id"]) for inst in institutions]
+        assert institution_id in ids, f"Expected institution_id {institution_id} not found in {ids}."
         return {
             "id": raw_data.get("id"),
             "display_name": raw_data.get("display_name"),
-            "last_known_institutions_ids": [str(inst["id"]) for inst in raw_data.get("last_known_institutions", []) if "id" in inst],
+            "institution_id": institution_id,
         }
 
     @classmethod
-    def from_raw(cls, raw_data: dict) -> Self:
-        return cls(**cls.parse(raw_data))
+    def from_raw(cls, raw_data: dict, institution_id: str) -> Self:
+        return cls(**cls.parse(raw_data, institution_id))
 
     @classmethod
     def embedding_config(cls) -> EmbeddingConfig | None:
