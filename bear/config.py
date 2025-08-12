@@ -40,11 +40,6 @@ class Config(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env")
 
-    # (Optional) OpenAlex data dump database
-    POSTGRES_USER: SecretStr | None = None
-    POSTGRES_PASSWORD: SecretStr | None = None
-    POSTGRES_URL: SecretStr | None = None
-
     # Milvus
     MINIO_ACCESS_KEY: SecretStr | None = None
     MINIO_SECRET_KEY: SecretStr | None = None
@@ -54,6 +49,7 @@ class Config(BaseSettings):
     MILVUS_DB_NAME: str = "dev"
 
     # External APIs
+    OPENALEX_INSTITUTION_ID: str = ""
     OPENALEX_MAILTO_EMAIL: str = ""
     OPENAI_API_KEY: SecretStr | None = None
     TEI_API_KEY: SecretStr | None = None
@@ -72,6 +68,11 @@ class Config(BaseSettings):
     DEFAULT_METRIC_TYPE: str = "IP"
     DEFAULT_HNSW_M: int = 32
     DEFAULT_HNSW_EF_CONSTRUCTION: int = 512
+
+    # (Optional) OpenAlex data dump database
+    POSTGRES_USER: SecretStr | None = None
+    POSTGRES_PASSWORD: SecretStr | None = None
+    POSTGRES_URL: SecretStr | None = None
 
     # Logging
     LOG_LEVEL: str = "DEBUG"
