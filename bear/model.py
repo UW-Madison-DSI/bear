@@ -32,9 +32,9 @@ class CollectionProtocol(Protocol):
     @classmethod
     def embedding_config(cls) -> EmbeddingConfig | None: ...  # Embedding configuration for the resource
     @staticmethod
-    def parse(raw_data: dict, **kwargs) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
+    def parse(raw_data: dict, *args, **kwargs) -> dict: ...  # Parse raw data to a dictionary suitable for the resource
     @classmethod
-    def from_raw(cls, raw_data: dict, **kwargs) -> Self: ...  # Create an instance from raw data
+    def from_raw(cls, raw_data: dict, *args, **kwargs) -> Self: ...  # Create an instance from raw data
     def model_dump(self) -> dict: ...  # Convert the resource to a dictionary for Milvus insertion
     def __str__(self) -> str: ...  # Return a string representation of the resource, used for embeddings.
 
