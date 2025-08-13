@@ -22,14 +22,14 @@ class TestStripOAPrefix:
 
     def test_strips_openalex_prefix(self):
         """Test that OpenAlex prefix is correctly stripped."""
-        assert strip_oa_prefix("https://openalex.org/A123456789") == "A123456789"
-        assert strip_oa_prefix("https://openalex.org/I135310074") == "I135310074"
-        assert strip_oa_prefix("https://openalex.org/W2755950973") == "W2755950973"
+        assert strip_oa_prefix("https://openalex.org/A123456789") == "a123456789"
+        assert strip_oa_prefix("https://openalex.org/I135310074") == "i135310074"
+        assert strip_oa_prefix("https://openalex.org/W2755950973") == "w2755950973"
 
     def test_handles_already_stripped(self):
         """Test that already stripped IDs are returned unchanged."""
-        assert strip_oa_prefix("A123456789") == "A123456789"
-        assert strip_oa_prefix("I135310074") == "I135310074"
+        assert strip_oa_prefix("A123456789") == "a123456789"
+        assert strip_oa_prefix("I135310074") == "i135310074"
 
     def test_handles_empty_string(self):
         """Test that empty string is handled correctly."""
@@ -48,7 +48,7 @@ class TestGetOpenAlexId:
 
         result = get_openalex_id("authors", "Jason Chor Ming Lo")
 
-        assert result == "A123456789"
+        assert result == "a123456789"
         mock_get.assert_called_once()
 
     @patch("bear.crawler.httpx.get")
@@ -60,7 +60,7 @@ class TestGetOpenAlexId:
 
         result = get_openalex_id("institutions", "University of Wisconsin-Madison")
 
-        assert result == "I135310074"
+        assert result == "i135310074"
 
     @patch("bear.crawler.httpx.get")
     def test_no_results_found(self, mock_get):
