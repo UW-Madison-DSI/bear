@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from pymilvus import MilvusClient
 
 from bear.db import create_resource_collection, get_milvus_client, init
-from bear.model import ALL_RESOURCES, Work
+from bear.model import ALL_CLUSTERS, ALL_RESOURCES, Work
 
 
 class TestGetMilvusClient:
@@ -20,13 +20,15 @@ class TestGetMilvusClient:
         mock_config.MILVUS_HOST = "localhost"
         mock_config.MILVUS_PORT = "19530"
         mock_config.MILVUS_TOKEN = "test-token"
+        mock_config.MILVUS_DB_NAME = "test_db"
 
         mock_client_instance = Mock()
         mock_milvus_client.return_value = mock_client_instance
 
-        result = get_milvus_client()
+        result = get_milvus_client(db_name="test_db")
 
         mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="test-token")
+        mock_client_instance.use_database.assert_called_once_with("test_db")
         assert result == mock_client_instance
 
     @patch("bear.db.config")
@@ -36,13 +38,15 @@ class TestGetMilvusClient:
         mock_config.MILVUS_HOST = "localhost"
         mock_config.MILVUS_PORT = "19530"
         mock_config.MILVUS_TOKEN = None
+        mock_config.MILVUS_DB_NAME = "test_db"
 
         mock_client_instance = Mock()
         mock_milvus_client.return_value = mock_client_instance
 
-        result = get_milvus_client()
+        result = get_milvus_client(db_name="test_db")
 
         mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="")
+        mock_client_instance.use_database.assert_called_once_with("test_db")
         assert result == mock_client_instance
 
     @patch("bear.db.config")
@@ -52,18 +56,38 @@ class TestGetMilvusClient:
         mock_config.MILVUS_HOST = "localhost"
         mock_config.MILVUS_PORT = "19530"
         mock_config.MILVUS_TOKEN = ""
+        mock_config.MILVUS_DB_NAME = "test_db"
 
         mock_client_instance = Mock()
         mock_milvus_client.return_value = mock_client_instance
 
-        result = get_milvus_client()
+        result = get_milvus_client(db_name="test_db")
 
         mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="")
+        mock_client_instance.use_database.assert_called_once_with("test_db")
+        assert result == mock_client_instance
+
+    @patch("bear.db.config")
+    @patch("bear.db.MilvusClient")
+    def test_get_milvus_client_with_default_db_name(self, mock_milvus_client, mock_config):
+        """Test getting Milvus client with default database name from config."""
+        mock_config.MILVUS_HOST = "localhost"
+        mock_config.MILVUS_PORT = "19530"
+        mock_config.MILVUS_TOKEN = "test-token"
+
+        # The default parameter is evaluated at function definition, so it uses the real config value 'dev'
+        mock_client_instance = Mock()
+        mock_milvus_client.return_value = mock_client_instance
+
+        result = get_milvus_client()  # No db_name provided, uses real config default of 'dev'
+
+        mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="test-token")
+        mock_client_instance.use_database.assert_called_once_with("dev")  # Real config default
         assert result == mock_client_instance
 
 
-class TestCreateMilvusCollection:
-    """Test cases for create_milvus_collection function."""
+class TestCreateResourceCollection:
+    """Test cases for create_resource_collection function."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -74,7 +98,7 @@ class TestCreateMilvusCollection:
         self.mock_client.create_schema.return_value = self.mock_schema
         self.mock_client.prepare_index_params.return_value = self.mock_index_params
 
-    def test_create_milvus_collection_success(self):
+    def test_create_resource_collection_success(self):
         """Test successful creation of Milvus collection."""
         self.mock_client.has_collection.return_value = False
 
@@ -95,7 +119,7 @@ class TestCreateMilvusCollection:
         assert create_collection_call[1]["schema"] == self.mock_schema
         assert create_collection_call[1]["index_params"] == self.mock_index_params
 
-    def test_create_milvus_collection_already_exists(self):
+    def test_create_resource_collection_already_exists(self):
         """Test creating collection when it already exists."""
         self.mock_client.has_collection.return_value = True
 
@@ -106,7 +130,7 @@ class TestCreateMilvusCollection:
         self.mock_client.create_schema.assert_not_called()
         self.mock_client.create_collection.assert_not_called()
 
-    def test_create_milvus_collection_unregistered_model(self):
+    def test_create_resource_collection_unregistered_model(self):
         """Test creating collection with unregistered model."""
 
         # Create a dummy model not in ALL_MODELS
@@ -114,14 +138,14 @@ class TestCreateMilvusCollection:
             name: str
 
         with pytest.raises(ValueError, match="Model .* is not registered in bear.model.ALL_MODELS"):
-            create_resource_collection(self.mock_client, UnregisteredModel)
+            create_resource_collection(self.mock_client, UnregisteredModel)  # type: ignore
 
 
 class TestInit:
     """Test cases for init function."""
 
     @patch("bear.db.get_milvus_client")
-    @patch("bear.db.create_milvus_collection")
+    @patch("bear.db.create_resource_collection")
     @patch("bear.db.config")
     def test_init_creates_database_and_collections(self, mock_config, mock_create_collection, mock_get_client):
         """Test init function creates database and collections."""
@@ -135,17 +159,20 @@ class TestInit:
         # Call init with the mocked db_name parameter
         init(db_name="test_db")
 
+        # Verify get_milvus_client was called with correct db_name
+        mock_get_client.assert_called_once_with(db_name="test_db")
+
         # Verify database creation
         mock_client.create_database.assert_called_once_with(db_name="test_db")
         mock_client.use_database.assert_called_once_with("test_db")
 
         # Verify collections creation for all models
-        assert mock_create_collection.call_count == len(ALL_RESOURCES)
-        for model in ALL_RESOURCES:
+        assert mock_create_collection.call_count == len(ALL_RESOURCES + ALL_CLUSTERS)
+        for model in ALL_RESOURCES + ALL_CLUSTERS:
             mock_create_collection.assert_any_call(client=mock_client, model=model)
 
     @patch("bear.db.get_milvus_client")
-    @patch("bear.db.create_milvus_collection")
+    @patch("bear.db.create_resource_collection")
     @patch("bear.db.config")
     def test_init_database_already_exists(self, mock_config, mock_create_collection, mock_get_client):
         """Test init function when database already exists."""
@@ -158,15 +185,18 @@ class TestInit:
         # Call init with the db_name parameter
         init(db_name="test_db")
 
+        # Verify get_milvus_client was called with correct db_name
+        mock_get_client.assert_called_once_with(db_name="test_db")
+
         # Verify database creation was not called
         mock_client.create_database.assert_not_called()
         mock_client.use_database.assert_called_once_with("test_db")
 
         # Verify collections creation still happens
-        assert mock_create_collection.call_count == len(ALL_RESOURCES)
+        assert mock_create_collection.call_count == len(ALL_RESOURCES + ALL_CLUSTERS)
 
     @patch("bear.db.get_milvus_client")
-    @patch("bear.db.create_milvus_collection")
+    @patch("bear.db.create_resource_collection")
     def test_init_with_custom_db_name(self, mock_create_collection, mock_get_client):
         """Test init function with custom database name."""
         custom_db_name = "custom_test_db"
@@ -177,13 +207,16 @@ class TestInit:
 
         init(db_name=custom_db_name)
 
+        # Verify get_milvus_client was called with correct db_name
+        mock_get_client.assert_called_once_with(db_name=custom_db_name)
+
         # Verify custom database name is used
         mock_client.create_database.assert_called_once_with(db_name=custom_db_name)
         mock_client.use_database.assert_called_once_with(custom_db_name)
 
         # Verify collections creation
-        assert mock_create_collection.call_count == len(ALL_RESOURCES)
-        for model in ALL_RESOURCES:
+        assert mock_create_collection.call_count == len(ALL_RESOURCES + ALL_CLUSTERS)
+        for model in ALL_RESOURCES + ALL_CLUSTERS:
             mock_create_collection.assert_any_call(client=mock_client, model=model)
 
     @patch("bear.db.get_milvus_client")
@@ -194,7 +227,7 @@ class TestInit:
         mock_get_client.return_value = mock_client
         mock_client.list_databases.return_value = ["default"]
 
-        with patch("bear.db.create_milvus_collection"):
+        with patch("bear.db.create_resource_collection"):
             init("new_db")
 
         # Verify logging
@@ -231,8 +264,9 @@ class TestIntegration:
         # Verify the full workflow
         mock_milvus_client.assert_called_once_with(uri="http://localhost:19530", token="test-token")
         mock_client.create_database.assert_called_once_with(db_name="test_db")
+        # use_database is called twice: once in get_milvus_client and once in init
         assert mock_client.use_database.call_count == 2
 
         # Verify collection creation for each model
-        expected_calls = len(ALL_RESOURCES)
+        expected_calls = len(ALL_RESOURCES + ALL_CLUSTERS)
         assert mock_client.create_collection.call_count == expected_calls
