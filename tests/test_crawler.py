@@ -13,8 +13,8 @@ from bear.crawler import (
     _get_page_results,
     get_openalex_id,
     query_openalex,
-    strip_oa_prefix,
 )
+from bear.utils import strip_oa_prefix
 
 
 class TestStripOAPrefix:

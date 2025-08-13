@@ -1,40 +1,42 @@
-from functools import cache
 from typing import Any
 
-import pandas as pd
+from cachetools import TTLCache, cached
 from pymilvus import MilvusClient
 
 from bear import model
-from bear.config import logger
+from bear.config import config, logger
 from bear.db import get_milvus_client
 from bear.embedding import embed_query
 from bear.reranker import Reranker, get_reranker
-
-INSTITUTION_AUTHOR_DIRECTORY = {
-    "uw-madison": "tmp/openalex_data/authors",
-}
+from bear.utils import strip_oa_prefix
 
 
-@cache
-def load_institution_author_ids(institution: str) -> set[str]:
+@cached(cache=TTLCache(maxsize=3, ttl=24 * 60 * 60))
+def load_institution_author_ids(institution_id: str = config.OPENALEX_INSTITUTION_ID) -> set[str]:
     """Load author IDs associated with a specific institution."""
 
-    assert institution in INSTITUTION_AUTHOR_DIRECTORY, "Institution not found in directory map."
-    df = pd.read_parquet(INSTITUTION_AUTHOR_DIRECTORY[institution], columns=["id"])
-    logger.info(f"Loaded {len(df)} author IDs for institution: {institution}")
-    return set(df["id"].values)
+    client = get_milvus_client()
+    iterator = client.query_iterator(collection_name="person", filter=f"institution_id == '{institution_id}'", output_fields=["id"], batch_size=1000)
+    results = set()
+    while True:
+        batch = iterator.next()
+        if not batch:
+            iterator.close()
+            break
+        ids = {strip_oa_prefix(item["id"]) for item in batch}
+        results.update(ids)
+    return results
 
 
-def filter_institution_authors(institutions: list[str], results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def filter_institution_authors(institution_ids: list[str], results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Filter authors by institution."""
 
-    logger.info(f"Filtering authors for institutions: {institutions}")
+    logger.info(f"Filtering authors for institutions: {institution_ids}")
     logger.info(f"Total results before filtering: {len(results)}")
     acceptable_author_ids = set()
-    for institution in institutions:
-        assert institution in INSTITUTION_AUTHOR_DIRECTORY, "Institution not found in directory map."
-        acceptable_author_ids.update(load_institution_author_ids(institution))
-    filtered_results = [result for result in results if result["author_id"] in acceptable_author_ids]
+    for id in institution_ids:
+        acceptable_author_ids.update(load_institution_author_ids(id))
+    filtered_results = [result for result in results if strip_oa_prefix(result["author_id"]) in acceptable_author_ids]
     logger.info(f"Total results after filtering: {len(filtered_results)}")
     return filtered_results
 
@@ -111,8 +113,10 @@ class SearchEngine:
     def search_author(self, query: str, top_k: int = 1000, institutions: list[str] | None = None, **kwargs) -> list[dict]:
         """Search for authors based on a query string."""
 
+        if not institutions:
+            institutions = [config.OPENALEX_INSTITUTION_ID]
+
         resources_sets = {name: self.search_resource(name, query, top_k, **kwargs) for name in model.ALL_RESOURCES_NAMES}
         results = self.reranker.rerank(resources_sets)
-        if institutions:
-            results = filter_institution_authors(institutions=institutions, results=results)
+        results = filter_institution_authors(institution_ids=institutions, results=results)
         return results
