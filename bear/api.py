@@ -55,7 +55,7 @@ class ResourceSearchResult(BaseModel):
 
 class AuthorSearchResult(BaseModel):
     author_id: str
-    score: float
+    scores: dict[str, float]
 
 
 @app.get("/search_resource", response_model=list[ResourceSearchResult])
@@ -128,7 +128,7 @@ def search_author_route(
         if not results:
             raise HTTPException(status_code=404, detail="No results found.")
 
-        return [AuthorSearchResult(author_id=result["author_id"], score=result["score"]) for result in results]
+        return [AuthorSearchResult(author_id=result["author_id"], scores=result["scores"]) for result in results]
 
     except HTTPException:
         # Re-raise HTTPExceptions (like 404) without modification
