@@ -143,7 +143,7 @@ class Reranker:
 
         return [
             {
-                "id": author_id,
+                "author_id": author_id,
                 "scores": {
                     "total": total_score,
                     **{resource_type: resource_scores.get(author_id, 0) for resource_type, resource_scores in resource_scores.items()},

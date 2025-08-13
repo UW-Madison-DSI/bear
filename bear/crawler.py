@@ -13,11 +13,7 @@ from tenacity import (
 from tqdm import tqdm
 
 from bear.config import config, logger
-
-
-def strip_oa_prefix(id: str) -> str:
-    """Remove the OpenAlex ID prefix."""
-    return id.lstrip("https://openalex.org/").lower()
+from bear.utils import strip_oa_prefix
 
 
 @retry(

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, WithJsonSchema
 from pymilvus import DataType
 
 from bear.config import EmbeddingConfig, config
-from bear.crawler import strip_oa_prefix
+from bear.utils import strip_oa_prefix
 
 
 def _clean_inverted_index(inverted_index: dict[str, Any]) -> dict[str, list[int]]:
