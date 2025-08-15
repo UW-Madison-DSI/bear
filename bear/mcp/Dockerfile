@@ -22,6 +22,4 @@ RUN uv sync --locked --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
 CMD bear-mcp
-EXPOSE 6277
-EXPOSE 6274
 EXPOSE 8000
