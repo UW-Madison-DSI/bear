@@ -8,6 +8,7 @@ dependencies = [
     "cachetools>=6.1.0",
     "fastapi[standard]>=0.116.1",
     "httpx>=0.28.1",
+    "mcp[cli]>=1.13.0",
     "mkdocs-material>=9.6.15",
     "numexpr>=2.11.0",
     "openai>=1.97.0",
@@ -29,7 +30,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-    "bear/**/*.py",
+    "bear/**/*.py"
 ]
 
 [dependency-groups]
@@ -46,3 +47,7 @@ docs = [
     "mkdocs-minify-plugin>=0.8.0",
     "mkdocs-material>=9.6.15",
 ]
+
+[project.scripts]
+bear-api = "bear.api.main:main"
+bear-mcp = "bear.mcp.main:main"
