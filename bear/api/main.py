@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -135,3 +136,7 @@ def search_author_route(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Author search failed: {str(e)}")
+
+
+def main():
+    uvicorn.run("bear.api.main:app", host="0.0.0.0", port=8000)
