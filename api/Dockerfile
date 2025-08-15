@@ -1,10 +1,7 @@
-# Application Dockerfile
 FROM python:3.12-slim
 
 WORKDIR /app
-EXPOSE 8000
 
-# Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 
 # Install uv
@@ -16,11 +13,14 @@ ENV PATH="/root/.local/bin:${PATH}"
 COPY pyproject.toml .
 COPY README.md .
 COPY uv.lock .
-RUN uv sync --frozen
+RUN uv sync --locked --no-install-project --no-dev
 
 # Copy the application
 COPY bear ./bear
+COPY api ./api
+RUN uv sync --locked --no-dev
 
 # Inject app_type specific commands
-CMD ["uv", "run", "fastapi", "run", "bear/api.py", "--port", "8000"]
+CMD ["uv", "run", "fastapi", "run", "api/main.py", "--port", "8000"]
+EXPOSE 8000
 
