@@ -68,7 +68,7 @@ services:
   api:
     container_name: api
     build:
-      dockerfile: api/Dockerfile
+      dockerfile: bear/api/Dockerfile
     volumes:
       - ./tmp:/app/tmp
     env_file:
@@ -77,7 +77,24 @@ services:
       - MILVUS_HOST=milvus
     ports:
       - "8000:8000"
+    depends_on:
+      - milvus
 
+  mcp:
+    container_name: mcp
+    build:
+      dockerfile: mcp/Dockerfile
+    ports:
+      - "6274:6274"
+      - "6277:6277"
+      - "8931:8931"
+    env_file:
+      - .env
+    environment:
+      - MILVUS_HOST=milvus
+    command: ["mcp", "dev", "mcp/main.py"]
+    depends_on:
+      - milvus
 
 networks:
   default:

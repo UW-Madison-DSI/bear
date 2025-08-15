@@ -38,13 +38,13 @@ class EmbeddingConfig(BaseModel):
 class Config(BaseSettings):
     """System configuration. Settings are defined in `.env`. Refer to `example.env` for details."""
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # Milvus
     MINIO_ACCESS_KEY: SecretStr | None = None
     MINIO_SECRET_KEY: SecretStr | None = None
     MILVUS_TOKEN: SecretStr | None = None
-    MILVUS_HOST: str = "localhost"
+    MILVUS_HOST: str = "milvus"
     MILVUS_PORT: int = 19530
     MILVUS_DB_NAME: str = "dev"
 
