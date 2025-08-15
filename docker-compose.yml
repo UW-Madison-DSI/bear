@@ -68,8 +68,7 @@ services:
   api:
     container_name: api
     build:
-      context: .
-      dockerfile: Dockerfile
+      dockerfile: api/Dockerfile
     volumes:
       - ./tmp:/app/tmp
     env_file:
