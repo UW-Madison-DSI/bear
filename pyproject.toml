@@ -7,8 +7,8 @@ requires-python = ">=3.12"
 dependencies = [
     "cachetools>=6.1.0",
     "fastapi[standard]>=0.116.1",
+    "fastmcp>=2.11.3",
     "httpx>=0.28.1",
-    "mcp[cli]>=1.13.0",
     "mkdocs-material>=9.6.15",
     "numexpr>=2.11.0",
     "openai>=1.97.0",
@@ -25,13 +25,12 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.8.11,<0.9.0"]
+build-backend = "uv_build"
 
-[tool.hatch.build]
-include = [
-    "bear/**/*.py"
-]
+[tool.uv.build-backend]
+module-name = "bear"
+module-root = ""
 
 [dependency-groups]
 dev = [
@@ -39,8 +38,6 @@ dev = [
     "faker>=37.4.2",
     "ipykernel",
     "pytest",
-]
-docs = [
     "mkdocs>=1.6.0",
     "mkdocstrings[python]>=0.27.0",
     "mkdocs-jupyter>=0.25.0",

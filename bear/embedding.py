@@ -200,7 +200,12 @@ def get_embedder(embedding_config: EmbeddingConfig = config.default_embedding_co
 def embed_query(query: str, embedding_config: EmbeddingConfig = config.default_embedding_config) -> list[float]:
     """Embed a query string into a vector representation."""
     embedder = get_embedder(embedding_config)
-    return embedder.embed(text=query, text_type=TextType.QUERY)[0]
+
+    try:
+        return embedder.embed(text=query, text_type=TextType.QUERY)[0]
+    except Exception as e:
+        logger.error(f"Error embedding query: {e}")
+        return []
 
 
 def embed_resources(
