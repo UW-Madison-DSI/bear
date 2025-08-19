@@ -1,9 +1,7 @@
 name: Dockerize Tagged Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-and-push:
