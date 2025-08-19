@@ -1,3 +1,5 @@
+import argparse
+
 from dotenv import load_dotenv
 from pymilvus import MilvusClient
 
@@ -82,5 +84,9 @@ def push(resources: list[CollectionType], db_name: str = config.MILVUS_DB_NAME) 
 
 
 if __name__ == "__main__":
-    init(wipe=True)  # TODO: Make this configurable
+    parser = argparse.ArgumentParser(description="Initialize Milvus database and collections.")
+    parser.add_argument("--wipe", action="store_true", help="Wipe the database before initializing.")
+    args = parser.parse_args()
+
+    init(wipe=args.wipe)
     logger.info("Milvus collections initialized successfully.")
