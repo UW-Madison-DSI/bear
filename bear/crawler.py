@@ -148,7 +148,6 @@ def _dump(data: list[dict], filename: Path) -> None:
 
 
 def crawl(
-    institution: str,
     save_path: Path = Path("tmp/openalex_data"),
     author_api_call_limit: int = 0,
     authors_limit: int = 0,
@@ -168,7 +167,7 @@ def crawl(
 
     if not skip_pulling_authors:
         # Get all authors affiliated with the institution
-        institution_id = get_openalex_id("institutions", institution)
+        institution_id = config.OPENALEX_INSTITUTION_ID
 
         logger.info(f"Fetching authors for institution ID: {institution_id}")
         query_authors = f"last_known_institutions.id:{institution_id}"
@@ -203,11 +202,6 @@ def crawl(
 def main():
     parser = argparse.ArgumentParser(description="Crawl OpenAlex API.")
     parser.add_argument(
-        "institution",
-        type=str,
-        help="Enter your institution name.",
-    )
-    parser.add_argument(
         "--test",
         action="store_true",
         help="Run in test mode with limited API calls.",
@@ -219,7 +213,6 @@ def main():
     )
     args = parser.parse_args()
     crawl(
-        institution=args.institution,
         author_api_call_limit=3 if args.test else 0,
         authors_limit=10 if args.test else 0,
         per_author_work_api_call_limit=3 if args.test else 0,
