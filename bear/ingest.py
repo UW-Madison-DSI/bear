@@ -27,7 +27,7 @@ def ingest_work(path: Path, remove_ingested: bool = False) -> None:
         path.unlink()
 
 
-def ingest_person(path: Path) -> None:
+def ingest_person(path: Path, remove_ingested: bool = False) -> None:
     """Ingest staging person data from a Parquet file to Milvus."""
 
     logger.info(f"Loading data from {path}")
@@ -46,15 +46,36 @@ def ingest_person(path: Path) -> None:
     push(persons)
     logger.info(f"Ingested {len(persons)} persons from {path} into Milvus.")
 
+    if remove_ingested:
+        logger.info(f"Removing file {path} after ingestion.")
+        path.unlink()
+
 
 def main() -> None:
     """Main function to run the ingestion."""
     parser = argparse.ArgumentParser(description="Ingest OpenAlex data into Milvus.")
-    parser.add_argument("--type", type=str, choices=["work", "person"], default="work", help="Type of data to ingest.")
-    parser.add_argument("--path", type=str, default="tmp/openalex_data/works", help="Path to the directory containing parquet files to ingest.")
+    parser.add_argument("--type", type=str, choices=["work", "person", "all"], default="all", help="Type of data to ingest.")
+    parser.add_argument(
+        "--path",
+        type=str,
+        default="",
+        help="Path to the directory containing parquet files to ingest. (e.g. tmp/openalex_data/works for --type work, tmp/openalex_data/authors for --type person)",
+    )
     parser.add_argument("--test", action="store_true", help="Run in test mode, ingest 10 files.")
 
     args = parser.parse_args()
+
+    # Default everything
+    if not args.path and args.type == "all":
+        logger.info("Ingesting works")
+        [ingest_work(f, remove_ingested=True) for f in Path("tmp/openalex_data/works").rglob("*.parquet")]
+        Path("tmp/openalex_data/works").unlink()  # Wipe parent folder
+        logger.info("Ingesting persons")
+        [ingest_person(f, remove_ingested=True) for f in Path("tmp/openalex_data/authors").rglob("*.parquet")]
+        logger.info("Ingestion complete for all types and removed all intermediate files.")
+        return
+
+    # Advanced ingestion
     staging_dir = Path(args.path)
     files = list(staging_dir.rglob("*.parquet"))
     files = files[:10] if args.test else files

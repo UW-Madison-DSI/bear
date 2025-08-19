@@ -74,7 +74,7 @@ services:
     env_file:
       - .env
     environment:
-      - MILVUS_HOST=milvus
+      - MILVUS_HOST=milvus  # Access with internal docker network
     ports:
       - "8000:8000"
     depends_on:
@@ -89,7 +89,7 @@ services:
     env_file:
       - .env
     environment:
-      - MILVUS_HOST=milvus
+      - MILVUS_HOST=milvus  # Access with internal docker network
     depends_on:
       - milvus
 

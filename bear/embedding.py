@@ -64,6 +64,8 @@ class OpenAIEmbedder:
     """Embedder using OpenAI's API."""
 
     def __init__(self, model: str, max_tokens: int, doc_prefix: str = "", query_prefix: str = "", api_key: str | None = None, **kwargs) -> None:
+        if not api_key:
+            api_key = config.OPENAI_API_KEY.get_secret_value() if config.OPENAI_API_KEY else None
         self.client = OpenAI(api_key=api_key)
         self.model = model
         self.max_tokens = max_tokens
@@ -78,7 +80,7 @@ class OpenAIEmbedder:
             max_tokens=embedding_config.max_tokens,
             doc_prefix=embedding_config.doc_prefix,
             query_prefix=embedding_config.query_prefix,
-            api_key=str(embedding_config.api_key) if embedding_config.api_key else None,
+            api_key=embedding_config.api_key.get_secret_value() if embedding_config.api_key else None,
         )
 
     @property

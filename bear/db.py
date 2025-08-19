@@ -56,7 +56,6 @@ def init(db_name: str = config.MILVUS_DB_NAME, wipe: bool = False) -> None:
     if wipe and db_name in client.list_databases():
         logger.info(f"Wiping database: {db_name}")
         [client.drop_collection(x) for x in client.list_collections()]
-        client.drop_database(db_name=db_name)
 
     if db_name not in client.list_databases():
         logger.info(f"Creating database: {db_name}")
