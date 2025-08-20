@@ -79,6 +79,8 @@ services:
       - "8000:8000"
     depends_on:
       - milvus
+    restart: unless-stopped
+    
 
   mcp:
     container_name: mcp
@@ -92,8 +94,4 @@ services:
       - MILVUS_HOST=milvus  # Access with internal docker network
     depends_on:
       - milvus
-
-networks:
-  default:
-    name: bear
-    external: true
+    restart: unless-stopped
