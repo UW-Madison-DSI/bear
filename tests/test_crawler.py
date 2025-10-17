@@ -39,35 +39,41 @@ class TestStripOAPrefix:
 class TestGetOpenAlexId:
     """Test the get_openalex_id function."""
 
-    @patch("bear.crawler.httpx.get")
-    def test_successful_author_search(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_successful_author_search(self, mock_get_client):
         """Test successful author ID retrieval."""
+        mock_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = {"results": [{"id": "https://openalex.org/A123456789", "display_name": "Jason Chor Ming Lo"}]}
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         result = get_openalex_id("authors", "Jason Chor Ming Lo")
 
         assert result == "a123456789"
-        mock_get.assert_called_once()
+        mock_client.get.assert_called_once()
 
-    @patch("bear.crawler.httpx.get")
-    def test_successful_institution_search(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_successful_institution_search(self, mock_get_client):
         """Test successful institution ID retrieval."""
+        mock_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = {"results": [{"id": "https://openalex.org/I135310074", "display_name": "University of Wisconsin-Madison"}]}
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         result = get_openalex_id("institutions", "University of Wisconsin-Madison")
 
         assert result == "i135310074"
 
-    @patch("bear.crawler.httpx.get")
-    def test_no_results_found(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_no_results_found(self, mock_get_client):
         """Test when no results are found."""
+        mock_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = {"results": []}
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         with pytest.raises(ValueError, match="No author found for query"):
             get_openalex_id("authors", "NonExistent Author")
@@ -77,39 +83,45 @@ class TestGetOpenAlexId:
         with pytest.raises(ValueError, match="entity_type must be 'authors' or 'institutions'"):
             get_openalex_id("invalid", "test")
 
-    @patch("bear.crawler.httpx.get")
-    def test_http_error_retry_exhaustion(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_http_error_retry_exhaustion(self, mock_get_client):
         """Test that HTTP errors cause retries and eventually raise."""
-        mock_get.side_effect = httpx.HTTPError("Connection failed")
+        mock_client = Mock()
+        mock_client.get.side_effect = httpx.HTTPError("Connection failed")
+        mock_get_client.return_value = mock_client
 
         with pytest.raises(httpx.HTTPError):
             get_openalex_id("authors", "Test Author")
 
     @patch("bear.crawler.config")
-    @patch("bear.crawler.httpx.get")
-    def test_includes_mailto_when_configured(self, mock_get, mock_config):
+    @patch("bear.crawler.get_http_client")
+    def test_includes_mailto_when_configured(self, mock_get_client, mock_config):
         """Test that mailto parameter is included when configured."""
         mock_config.OPENALEX_MAILTO_EMAIL = "test@example.com"
+        mock_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = {"results": [{"id": "https://openalex.org/A123456789", "display_name": "Test Author"}]}
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         get_openalex_id("authors", "Test Author")
 
         # Check that the URL includes the mailto parameter
-        called_url = mock_get.call_args[0][0]
+        called_url = mock_client.get.call_args[0][0]
         assert "mailto=test@example.com" in called_url
 
 
 class TestGetPageResults:
     """Test the _get_page_results function."""
 
-    @patch("bear.crawler.httpx.get")
-    def test_successful_page_retrieval(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_successful_page_retrieval(self, mock_get_client):
         """Test successful page retrieval."""
+        mock_client = Mock()
         mock_response = Mock()
         mock_response.json.return_value = {"meta": {"next_cursor": "cursor123"}, "results": [{"id": "A123"}, {"id": "A456"}]}
-        mock_get.return_value = mock_response
+        mock_client.get.return_value = mock_response
+        mock_get_client.return_value = mock_client
 
         cursor, results = _get_page_results("authors", "test_query", "*")
 
@@ -117,10 +129,12 @@ class TestGetPageResults:
         assert len(results) == 2
         assert results[0]["id"] == "A123"
 
-    @patch("bear.crawler.httpx.get")
-    def test_http_error_raises(self, mock_get):
+    @patch("bear.crawler.get_http_client")
+    def test_http_error_raises(self, mock_get_client):
         """Test that HTTP errors are raised for retry logic."""
-        mock_get.side_effect = httpx.HTTPError("Connection failed")
+        mock_client = Mock()
+        mock_client.get.side_effect = httpx.HTTPError("Connection failed")
+        mock_get_client.return_value = mock_client
 
         with pytest.raises(httpx.HTTPError):
             _get_page_results("authors", "test_query", "*")

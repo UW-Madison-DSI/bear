@@ -5,6 +5,7 @@
         "headerlink",
         "inlinehilite",
         "intfloat",
+        "keepalive",
         "linenums",
         "psql",
         "pygments",

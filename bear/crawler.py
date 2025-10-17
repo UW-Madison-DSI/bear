@@ -1,4 +1,5 @@
 import argparse
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,42 @@ from tqdm import tqdm
 
 from bear.config import config, logger
 from bear.utils import strip_oa_prefix
+
+# Global HTTP client with connection pooling
+_http_client: httpx.Client | None = None
+
+
+def get_http_client() -> httpx.Client:
+    """Get or create a shared HTTP client with optimized connection pooling."""
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.Client(
+            timeout=httpx.Timeout(30.0, connect=10.0),
+            limits=httpx.Limits(
+                max_connections=100,
+                max_keepalive_connections=20,
+                keepalive_expiry=30.0,
+            ),
+            follow_redirects=True,
+        )
+    return _http_client
+
+
+def close_http_client() -> None:
+    """Close the shared HTTP client."""
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        _http_client.close()
+        _http_client = None
+
+
+@contextmanager
+def http_client_context():
+    """Context manager for HTTP client that ensures cleanup."""
+    try:
+        yield get_http_client()
+    finally:
+        pass  # Keep connection alive for reuse
 
 
 @retry(
@@ -42,7 +79,8 @@ def get_openalex_id(entity_type: str, name: str) -> str:
         url += f"&mailto={config.OPENALEX_MAILTO_EMAIL}"
 
     try:
-        response = httpx.get(url)
+        client = get_http_client()
+        response = client.get(url)
         response.raise_for_status()
         results = response.json().get("results")
 
@@ -71,7 +109,8 @@ def _get_page_results(endpoint: str, query: str, cursor: str = "*") -> tuple[str
         url += f"&mailto={config.OPENALEX_MAILTO_EMAIL}"
 
     try:
-        response = httpx.get(url, timeout=30.0)
+        client = get_http_client()
+        response = client.get(url)
         response.raise_for_status()
 
         cursor = response.json()["meta"]["next_cursor"]
@@ -159,44 +198,48 @@ def crawl(
 
     save_path.mkdir(parents=True, exist_ok=True)
 
-    # Get existing authors if skip_existing is True
-    if skip_existing_works and (save_path / "authors").exists():
-        existing_authors = [p.name for p in Path("tmp/openalex_data/works/").glob("*/")]
-    else:
-        existing_authors = []
+    try:
+        # Get existing authors if skip_existing is True
+        if skip_existing_works and (save_path / "authors").exists():
+            existing_authors = [p.name for p in (save_path / "works").glob("*/")]
+        else:
+            existing_authors = []
 
-    if not skip_pulling_authors:
-        # Get all authors affiliated with the institution
-        institution_id = config.OPENALEX_INSTITUTION_ID
+        if not skip_pulling_authors:
+            # Get all authors affiliated with the institution
+            institution_id = config.OPENALEX_INSTITUTION_ID
 
-        logger.info(f"Fetching authors for institution ID: {institution_id}")
-        query_authors = f"last_known_institutions.id:{institution_id}"
-        query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit, save_folder=save_path / "authors")
-        authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
-    else:
-        # If skipping pulling authors, use existing authors from previous runs
-        if (save_path / "authors").exists():
+            logger.info(f"Fetching authors for institution ID: {institution_id}")
+            query_authors = f"last_known_institutions.id:{institution_id}"
+            query_openalex(endpoint="authors", query=query_authors, limit=author_api_call_limit, save_folder=save_path / "authors")
             authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
         else:
-            logger.warning("Skipping pulling authors, but no existing authors found.")
-            authors = []
+            # If skipping pulling authors, use existing authors from previous runs
+            if (save_path / "authors").exists():
+                authors = pd.read_parquet(save_path / "authors").to_dict(orient="records")
+            else:
+                logger.warning("Skipping pulling authors, but no existing authors found.")
+                authors = []
 
-    # Get all works authored by the institution's authors
-    if authors_limit > 0:
-        authors = authors[:authors_limit]
+        # Get all works authored by the institution's authors
+        if authors_limit > 0:
+            authors = authors[:authors_limit]
 
-    if skip_existing_works:
-        authors = [a for a in authors if strip_oa_prefix(a["id"]) not in existing_authors]
+        if skip_existing_works:
+            authors = [a for a in authors if strip_oa_prefix(a["id"]) not in existing_authors]
 
-    for author in tqdm(authors):
-        try:
-            author_id = strip_oa_prefix(author["id"])
+        for author in tqdm(authors):
+            try:
+                author_id = strip_oa_prefix(author["id"])
 
-            query_works = f"authorships.author.id:{author_id}"
-            query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
-        except Exception as e:
-            logger.error(f"Error processing author {author['id']}: {str(e)}")
-            continue
+                query_works = f"authorships.author.id:{author_id}"
+                query_openalex(endpoint="works", query=query_works, limit=per_author_work_api_call_limit, save_folder=save_path / "works" / author_id)
+            except Exception as e:
+                logger.error(f"Error processing author {author['id']}: {str(e)}")
+                continue
+    finally:
+        # Clean up HTTP client after crawling is complete
+        close_http_client()
 
 
 def main():
