@@ -14,6 +14,7 @@ class TextType(StrEnum):
 
     DOC = "doc"
     QUERY = "query"
+    RAW = "raw"
 
 
 class Provider(StrEnum):
@@ -106,11 +107,12 @@ class OpenAIEmbedder:
         if isinstance(text_type, str):
             text_type = TextType(text_type)
 
-        assert text_type in (TextType.DOC, TextType.QUERY), "text_type must be either 'doc' or 'query'"
+        assert text_type in (TextType.DOC, TextType.QUERY, TextType.RAW), "text_type must be 'doc', 'query', or 'raw'"
         if text_type == TextType.DOC and self.doc_prefix:
             text = append_prefix(text, self.doc_prefix)
         elif text_type == TextType.QUERY and self.query_prefix:
             text = append_prefix(text, self.query_prefix)
+        # For RAW type, no prefix is applied
 
         response = self.client.embeddings.create(model=self.model, input=text)
         return [v.embedding for v in response.data]
@@ -185,6 +187,7 @@ class TEIEmbedder:
             text = append_prefix(text, self.doc_prefix)
         elif text_type == TextType.QUERY and self.query_prefix:
             text = append_prefix(text, self.query_prefix)
+        # For RAW type, no prefix is applied
 
         response = self.client.embeddings.create(model=self.model, input=text)
         return [v.embedding for v in response.data]
