@@ -41,7 +41,8 @@ def read_root():
         "Endpoints": {
             "search_resource": "GET /search_resource - Search for academic resources",
             "search_author": "GET /search_author - Search for authors",
-            "embed": "POST /embed - Generate text embeddings"
+            "embed": "POST /embed - Generate text embeddings",
+            "embed_info": "GET /embed/info - Get embedding system information"
         }
     }
 
@@ -74,6 +75,15 @@ class EmbedRequest(BaseModel):
 
 class EmbedResponse(BaseModel):
     embeddings: list[list[float]]
+
+
+class EmbedInfoResponse(BaseModel):
+    provider: str
+    model: str
+    dimensions: int
+    max_tokens: int
+    doc_prefix: str
+    query_prefix: str
 
 
 @app.get("/search_resource", response_model=list[ResourceSearchResult])
@@ -153,6 +163,38 @@ def search_author_route(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Author search failed: {str(e)}")
+
+
+@app.get("/embed/info", response_model=EmbedInfoResponse)
+def embed_info_route():
+    """Get information about the current embedding system configuration.
+    
+    Returns:
+        EmbedInfoResponse with embedding system details including:
+        - provider: The embedding provider (e.g., "openai", "tei")
+        - model: The embedding model name
+        - dimensions: The embedding vector dimensions
+        - max_tokens: Maximum tokens for input text
+        - doc_prefix: Prefix added to document text
+        - query_prefix: Prefix added to query text
+    """
+    try:
+        from bear.config import config
+        
+        embedder = get_embedder(config.default_embedding_config)
+        info = embedder.info
+        
+        return EmbedInfoResponse(
+            provider=info["provider"],
+            model=info["model"],
+            dimensions=info["dimensions"],
+            max_tokens=config.default_embedding_config.max_tokens,
+            doc_prefix=info["doc_prefix"],
+            query_prefix=info["query_prefix"]
+        )
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve embedding info: {str(e)}")
 
 
 @app.post("/embed", response_model=EmbedResponse)
