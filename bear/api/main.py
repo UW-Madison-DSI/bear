@@ -1,10 +1,12 @@
 from contextlib import asynccontextmanager
+from typing import Literal
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from bear.embedding import get_embedder
 from bear.model import Work
 from bear.search import SearchEngine
 
@@ -57,6 +59,15 @@ class ResourceSearchResult(BaseModel):
 class AuthorSearchResult(BaseModel):
     author_id: str
     scores: dict[str, float]
+
+
+class EmbedRequest(BaseModel):
+    texts: list[str]
+    type: Literal["query", "doc", "raw"] = "query"
+
+
+class EmbedResponse(BaseModel):
+    embeddings: list[list[float]]
 
 
 @app.get("/search_resource", response_model=list[ResourceSearchResult])
@@ -136,6 +147,33 @@ def search_author_route(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Author search failed: {str(e)}")
+
+
+@app.post("/embed", response_model=EmbedResponse)
+def embed_route(request: EmbedRequest):
+    """Generate embeddings for text using the default embedding model.
+    
+    Args:
+        request: EmbedRequest containing texts and type ("query", "doc", or "raw")
+        
+    Returns:
+        EmbedResponse with list of embeddings
+        
+    The type parameter controls text preprocessing:
+    - "query": Adds query prefix if configured
+    - "doc": Adds document prefix if configured  
+    - "raw": No prefix applied, use when you've manually added prefixes
+    """
+    try:
+        from bear.config import config
+        
+        embedder = get_embedder(config.default_embedding_config)
+        embeddings = embedder.embed(text=request.texts, text_type=request.type)
+        
+        return EmbedResponse(embeddings=embeddings)
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Embedding generation failed: {str(e)}")
 
 
 def main():

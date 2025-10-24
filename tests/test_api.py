@@ -1,11 +1,11 @@
 """Tests for the FastAPI endpoints."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from api.main import app
+from bear.api.main import app
 
 
 @pytest.fixture
@@ -194,3 +194,132 @@ class TestAPI:
         assert response.status_code == 200
         results = response.json()
         assert results[0]["abstract"] is None
+
+
+class TestEmbedEndpoint:
+    """Test cases for the /embed endpoint."""
+
+    def test_embed_success_query(self, client):
+        """Test successful embedding generation with query type."""
+        # Mock the embedder
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["test query 1", "test query 2"], "type": "query"}
+            )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert "embeddings" in result
+        assert len(result["embeddings"]) == 2
+        assert result["embeddings"][0] == [0.1, 0.2, 0.3]
+        assert result["embeddings"][1] == [0.4, 0.5, 0.6]
+        mock_embedder.embed.assert_called_once_with(text=["test query 1", "test query 2"], text_type="query")
+
+    def test_embed_success_doc(self, client):
+        """Test successful embedding generation with doc type."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.7, 0.8, 0.9]]
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["test document"], "type": "doc"}
+            )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["embeddings"]) == 1
+        assert result["embeddings"][0] == [0.7, 0.8, 0.9]
+        mock_embedder.embed.assert_called_once_with(text=["test document"], text_type="doc")
+
+    def test_embed_success_raw(self, client):
+        """Test successful embedding generation with raw type."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.1, 0.2, 0.3]]
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["query: test"], "type": "raw"}
+            )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["embeddings"]) == 1
+        assert result["embeddings"][0] == [0.1, 0.2, 0.3]
+        mock_embedder.embed.assert_called_once_with(text=["query: test"], text_type="raw")
+
+    def test_embed_default_type(self, client):
+        """Test that default type is 'query' when not specified."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [[0.1, 0.2, 0.3]]
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["test"]}
+            )
+        
+        assert response.status_code == 200
+        mock_embedder.embed.assert_called_once_with(text=["test"], text_type="query")
+
+    def test_embed_multiple_texts(self, client):
+        """Test embedding multiple texts at once."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = [
+            [0.1, 0.2],
+            [0.3, 0.4],
+            [0.5, 0.6],
+        ]
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["text1", "text2", "text3"], "type": "doc"}
+            )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert len(result["embeddings"]) == 3
+
+    def test_embed_invalid_type(self, client):
+        """Test that invalid type returns 422 validation error."""
+        response = client.post(
+            "/embed",
+            json={"texts": ["test"], "type": "invalid"}
+        )
+        
+        assert response.status_code == 422
+
+    def test_embed_empty_texts(self, client):
+        """Test embedding with empty texts list."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.return_value = []
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": [], "type": "query"}
+            )
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["embeddings"] == []
+
+    def test_embed_error_handling(self, client):
+        """Test error handling when embedding fails."""
+        mock_embedder = MagicMock()
+        mock_embedder.embed.side_effect = Exception("Embedding error")
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder):
+            response = client.post(
+                "/embed",
+                json={"texts": ["test"], "type": "query"}
+            )
+        
+        assert response.status_code == 500
+        assert "Embedding generation failed" in response.json()["detail"]
