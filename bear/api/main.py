@@ -37,7 +37,14 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     """Root endpoint to provide instructions for using the API."""
-    return {"Instruction": "Try /search_resource?query=your_query_here&top_k=3 or /search_author?query=your_query_here&top_k=3"}
+    return {
+        "Instruction": "Try /search_resource?query=your_query_here&top_k=3 or /search_author?query=your_query_here&top_k=3",
+        "Endpoints": {
+            "search_resource": "GET /search_resource - Search for academic resources",
+            "search_author": "GET /search_author - Search for authors",
+            "embed": "POST /embed - Generate text embeddings"
+        }
+    }
 
 
 class ResourceSearchResult(BaseModel):
