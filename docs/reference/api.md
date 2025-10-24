@@ -44,6 +44,7 @@ Response model for author search results.
 Request model for embedding generation.
 
 **Fields:**
+
 - `texts` (list[str]): List of text strings to embed
 - `type` (Literal["query", "doc", "raw"]): Type of text, defaults to "query"
   - `"query"`: Adds query prefix if configured
@@ -55,6 +56,7 @@ Request model for embedding generation.
 Response model containing generated embeddings.
 
 **Fields:**
+
 - `embeddings` (list[list[float]]): List of embedding vectors, one per input text
 
 ## Usage Examples
