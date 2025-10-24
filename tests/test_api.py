@@ -323,3 +323,71 @@ class TestEmbedEndpoint:
         
         assert response.status_code == 500
         assert "Embedding generation failed" in response.json()["detail"]
+
+
+class TestEmbedInfoEndpoint:
+    """Test cases for the /embed/info endpoint."""
+
+    def test_embed_info_success(self, client):
+        """Test successful retrieval of embedding info."""
+        # Mock the embedder
+        mock_embedder = MagicMock()
+        mock_embedder.info = {
+            "provider": "openai",
+            "model": "text-embedding-3-large",
+            "dimensions": 3072,
+            "doc_prefix": "passage: ",
+            "query_prefix": "query: "
+        }
+        
+        # Mock the config
+        mock_config = MagicMock()
+        mock_config.default_embedding_config.max_tokens = 512
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder), \
+             patch("bear.config.config", mock_config):
+            response = client.get("/embed/info")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["provider"] == "openai"
+        assert result["model"] == "text-embedding-3-large"
+        assert result["dimensions"] == 3072
+        assert result["max_tokens"] == 512
+        assert result["doc_prefix"] == "passage: "
+        assert result["query_prefix"] == "query: "
+
+    def test_embed_info_tei_provider(self, client):
+        """Test embedding info with TEI provider."""
+        mock_embedder = MagicMock()
+        mock_embedder.info = {
+            "provider": "tei",
+            "model": "BAAI/bge-large-en-v1.5",
+            "dimensions": 1024,
+            "doc_prefix": "",
+            "query_prefix": ""
+        }
+        
+        mock_config = MagicMock()
+        mock_config.default_embedding_config.max_tokens = 256
+        
+        with patch("bear.api.main.get_embedder", return_value=mock_embedder), \
+             patch("bear.config.config", mock_config):
+            response = client.get("/embed/info")
+        
+        assert response.status_code == 200
+        result = response.json()
+        assert result["provider"] == "tei"
+        assert result["model"] == "BAAI/bge-large-en-v1.5"
+        assert result["dimensions"] == 1024
+        assert result["max_tokens"] == 256
+        assert result["doc_prefix"] == ""
+        assert result["query_prefix"] == ""
+
+    def test_embed_info_error_handling(self, client):
+        """Test error handling when retrieving embedding info fails."""
+        with patch("bear.api.main.get_embedder", side_effect=Exception("Config error")):
+            response = client.get("/embed/info")
+        
+        assert response.status_code == 500
+        assert "Failed to retrieve embedding info" in response.json()["detail"]
