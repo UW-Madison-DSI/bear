@@ -1,12 +1,11 @@
 from contextlib import asynccontextmanager
-from typing import Literal
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from bear.embedding import get_embedder
+from bear.embedding import TextType, get_embedder
 from bear.model import Work
 from bear.search import SearchEngine
 
@@ -70,7 +69,7 @@ class AuthorSearchResult(BaseModel):
 
 class EmbedRequest(BaseModel):
     texts: list[str]
-    type: Literal["query", "doc", "raw"] = "query"
+    type: TextType = TextType.QUERY
 
 
 class EmbedResponse(BaseModel):
