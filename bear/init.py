@@ -3,7 +3,7 @@ from pathlib import Path
 
 import questionary
 
-from bear.crawler import get_openalex_id
+from bear.crawler import query_openalex_id
 from bear.db import init as db_init
 
 ENV_FILE = Path(__file__).parent.parent / ".env"
@@ -14,7 +14,9 @@ def get_password(prompt: str) -> str:
     key1, key2 = "x", "y"
     while key1 != key2:
         key1 = questionary.password(prompt).ask()
-        key2 = questionary.password("Please re-enter your password/key to confirm:").ask()
+        key2 = questionary.password(
+            "Please re-enter your password/key to confirm:"
+        ).ask()
         if key1 == key2:
             break
     return key1
@@ -28,7 +30,7 @@ def get_openalex_institution_id() -> str:
             continue
 
         try:
-            institution_id = get_openalex_id("institutions", institution_name)
+            institution_id = query_openalex_id("institutions", institution_name)
             message = f"Is this the correct ID for your institution: {institution_id}?"
             if questionary.confirm(message, default=True).ask():
                 questionary.print(f"Great! We'll use this ID: {institution_id}")
@@ -36,17 +38,23 @@ def get_openalex_institution_id() -> str:
             else:
                 questionary.print("Let's try again.")
         except ValueError:
-            questionary.print(f'Institution "{institution_name}" not found. Please try again.')
+            questionary.print(
+                f'Institution "{institution_name}" not found. Please try again.'
+            )
 
 
 def get_openalex_email() -> str:
     """Get user's email for OpenAlex polite API calls."""
-    return questionary.text("What is your email address? (For OpenAlex polite API, leave empty to skip)").ask()
+    return questionary.text(
+        "What is your email address? (For OpenAlex polite API, leave empty to skip)"
+    ).ask()
 
 
 def use_default_milvus_settings(env_file: Path) -> None:
     """Use default Milvus settings."""
-    print("Using default Milvus settings. You should change the default credentials in Production.")
+    print(
+        "Using default Milvus settings. You should change the default credentials in Production."
+    )
     with env_file.open("a") as f:
         f.write("MINIO_ACCESS_KEY=minioadmin\n")
         f.write("MINIO_SECRET_KEY=minioadmin\n")
@@ -69,11 +77,14 @@ def use_default_embedding_settings(env_file: Path) -> None:
 
 def quick_setup() -> None:
     confirm_quick_setup = questionary.select(
-        "Quick setup for demo purpose (you can change settings in .env later)", choices=["yes", "no (you will need to manually setup .env)"]
+        "Quick setup for demo purpose (you can change settings in .env later)",
+        choices=["yes", "no (you will need to manually setup .env)"],
     ).ask()
 
     if confirm_quick_setup == "yes":
-        questionary.print("For demo purpose, we'll use as many default settings as possible to get things going.")
+        questionary.print(
+            "For demo purpose, we'll use as many default settings as possible to get things going."
+        )
     else:
         questionary.print("Please manually setup the .env file.")
         return None
@@ -91,7 +102,9 @@ def quick_setup() -> None:
     # Get only the essentials in the quick setup
     institution_id = get_openalex_institution_id()
     email = get_openalex_email()
-    api_key = get_password("Please enter your OPENAI API key (caution: We will write it to .env in plain text, make sure you are comfortable with this):")
+    api_key = get_password(
+        "Please enter your OPENAI API key (caution: We will write it to .env in plain text, make sure you are comfortable with this):"
+    )
 
     with ENV_FILE.open("a") as f:
         f.write(f"OPENALEX_INSTITUTION_ID={institution_id}\n")
@@ -121,7 +134,10 @@ def main() -> None:
     if questionary.confirm("Start crawling?", default=True).ask():
         crawl_mode = questionary.select(
             "Select crawl mode",
-            choices=["Test crawl (just download 10 people data)", "Full crawl (It may takes hours)"],
+            choices=[
+                "Test crawl (just download 10 people data)",
+                "Full crawl (It may takes hours)",
+            ],
         ).ask()
         if crawl_mode == "Full crawl (It may takes hours)":
             subprocess.run(["nohup", "uv", "run", "bear/crawler.py", "&"])
