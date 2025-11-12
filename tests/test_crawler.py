@@ -10,9 +10,9 @@ import pytest
 
 from bear.crawler import (
     _dump,
-    _get_page_results,
-    get_openalex_id,
+    _query_page_results,
     query_openalex,
+    query_openalex_id,
 )
 from bear.utils import strip_oa_prefix
 
@@ -44,11 +44,18 @@ class TestGetOpenAlexId:
         """Test successful author ID retrieval."""
         mock_client = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {"results": [{"id": "https://openalex.org/A123456789", "display_name": "Jason Chor Ming Lo"}]}
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "id": "https://openalex.org/A123456789",
+                    "display_name": "Jason Chor Ming Lo",
+                }
+            ]
+        }
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        result = get_openalex_id("authors", "Jason Chor Ming Lo")
+        result = query_openalex_id("authors", "Jason Chor Ming Lo")
 
         assert result == "a123456789"
         mock_client.get.assert_called_once()
@@ -58,11 +65,18 @@ class TestGetOpenAlexId:
         """Test successful institution ID retrieval."""
         mock_client = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {"results": [{"id": "https://openalex.org/I135310074", "display_name": "University of Wisconsin-Madison"}]}
+        mock_response.json.return_value = {
+            "results": [
+                {
+                    "id": "https://openalex.org/I135310074",
+                    "display_name": "University of Wisconsin-Madison",
+                }
+            ]
+        }
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        result = get_openalex_id("institutions", "University of Wisconsin-Madison")
+        result = query_openalex_id("institutions", "University of Wisconsin-Madison")
 
         assert result == "i135310074"
 
@@ -76,12 +90,14 @@ class TestGetOpenAlexId:
         mock_get_client.return_value = mock_client
 
         with pytest.raises(ValueError, match="No author found for query"):
-            get_openalex_id("authors", "NonExistent Author")
+            query_openalex_id("authors", "NonExistent Author")
 
     def test_invalid_entity_type(self):
         """Test invalid entity type raises ValueError."""
-        with pytest.raises(ValueError, match="entity_type must be 'authors' or 'institutions'"):
-            get_openalex_id("invalid", "test")
+        with pytest.raises(
+            ValueError, match="entity_type must be 'authors' or 'institutions'"
+        ):
+            query_openalex_id("invalid", "test")
 
     @patch("bear.crawler.get_http_client")
     def test_http_error_retry_exhaustion(self, mock_get_client):
@@ -91,7 +107,7 @@ class TestGetOpenAlexId:
         mock_get_client.return_value = mock_client
 
         with pytest.raises(httpx.HTTPError):
-            get_openalex_id("authors", "Test Author")
+            query_openalex_id("authors", "Test Author")
 
     @patch("bear.crawler.config")
     @patch("bear.crawler.get_http_client")
@@ -100,11 +116,15 @@ class TestGetOpenAlexId:
         mock_config.OPENALEX_MAILTO_EMAIL = "test@example.com"
         mock_client = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {"results": [{"id": "https://openalex.org/A123456789", "display_name": "Test Author"}]}
+        mock_response.json.return_value = {
+            "results": [
+                {"id": "https://openalex.org/A123456789", "display_name": "Test Author"}
+            ]
+        }
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        get_openalex_id("authors", "Test Author")
+        query_openalex_id("authors", "Test Author")
 
         # Check that the URL includes the mailto parameter
         called_url = mock_client.get.call_args[0][0]
@@ -119,11 +139,14 @@ class TestGetPageResults:
         """Test successful page retrieval."""
         mock_client = Mock()
         mock_response = Mock()
-        mock_response.json.return_value = {"meta": {"next_cursor": "cursor123"}, "results": [{"id": "A123"}, {"id": "A456"}]}
+        mock_response.json.return_value = {
+            "meta": {"next_cursor": "cursor123"},
+            "results": [{"id": "A123"}, {"id": "A456"}],
+        }
         mock_client.get.return_value = mock_response
         mock_get_client.return_value = mock_client
 
-        cursor, results = _get_page_results("authors", "test_query", "*")
+        cursor, results = _query_page_results("authors", "test_query", "*")
 
         assert cursor == "cursor123"
         assert len(results) == 2
@@ -137,13 +160,13 @@ class TestGetPageResults:
         mock_get_client.return_value = mock_client
 
         with pytest.raises(httpx.HTTPError):
-            _get_page_results("authors", "test_query", "*")
+            _query_page_results("authors", "test_query", "*")
 
 
 class TestQueryOpenAlex:
     """Test the query_openalex function."""
 
-    @patch("bear.crawler._get_page_results")
+    @patch("bear.crawler._query_page_results")
     def test_query_all_pages(self, mock_get_page):
         """Test querying all pages until exhausted."""
         # Mock multiple pages of results
@@ -159,7 +182,7 @@ class TestQueryOpenAlex:
         assert results[0]["id"] == "A1"
         assert results[-1]["id"] == "A4"
 
-    @patch("bear.crawler._get_page_results")
+    @patch("bear.crawler._query_page_results")
     def test_query_with_limit(self, mock_get_page):
         """Test querying with API call limit."""
         mock_get_page.side_effect = [
@@ -180,7 +203,10 @@ class TestDump:
         """Test that data is correctly dumped to parquet file."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            test_data = [{"id": "A123", "name": "Author 1"}, {"id": "A456", "name": "Author 2"}]
+            test_data = [
+                {"id": "A123", "name": "Author 1"},
+                {"id": "A456", "name": "Author 2"},
+            ]
 
             _dump(test_data, temp_path / "test.parquet")
 
